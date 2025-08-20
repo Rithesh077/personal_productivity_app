@@ -33,9 +33,10 @@ def home():
     return jsonify(data)
 
 
-@app.route('/features/', methods=['GET'])
-def get_features():
-    return jsonify({"features": features})
+@app.route('/features/<int:feature_id>', methods=['GET'])
+def get_feature(feature_id):
+    feature = next((f for f in features if f['id'] == feature_id), None)
+    return jsonify({"feature": feature}) if feature else jsonify({"error": "Feature not found"}), 404
 
 
 if __name__ == '__main__':
