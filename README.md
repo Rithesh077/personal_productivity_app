@@ -9,6 +9,7 @@ This is a personal REST API designed to manage various productivity features lik
 - **Calendar Integration**: Sync your tasks with your calendar for better planning.
 - **Habit Tracking**: Monitor your habits and stay consistent.
 - **Fitness Tracker**: Track your workouts and physical activities.
+- **Schedule Manager**: Manage your schedule efficiently.
 
 ## API Endpoints
 
@@ -16,6 +17,7 @@ This is a personal REST API designed to manage various productivity features lik
 | ------ | ---------------- | ------------------------------------ |
 | `GET`  | `/features`      | Retrieve a list of all features.     |
 | `GET`  | `/features/<id>` | Retrieve a single feature by its ID. |
+| `POST` | `/features`      | Add a new feature to the list        |
 
 ## How to Run Locally
 
@@ -23,11 +25,19 @@ This is a personal REST API designed to manage various productivity features lik
    ```bash
    git clone https://github.com/Rithesh077/personal_productivity_app
    ```
-2. **Install dependencies:**
+2. **Create a virtual environment(optional):**
+
+   ```bash
+   python -m venv venv
+   #Windows:venv/Scripts/activate
+   #macOS/Linux:source venv/bin/activate
+   ```
+
+3. **Install dependencies:**
    ```bash
    pip install Flask
    ```
-3. **Run the application:**
+4. **Run the application:**
    ```bash
    python app.py
    ```
@@ -35,7 +45,8 @@ This is a personal REST API designed to manage various productivity features lik
 
 ## Future Enhancements
 
-- **Schedule Manager**: Implement a full 7-day calendar grid to allow for time-blocking and scheduling of tasks throughout the week.
+- **Frontend Integration**: Serve a web-based UI (from the `frontend/` directory) alongside the API, allowing users to interact with features visually instead of only through REST calls.
+- **List all features**: Implement GET/features method to list all the existing features.
 - **User Authentication**: Implement user accounts and JWT (JSON Web Tokens) for secure endpoints.
 - **Database Integration**: Replace the in-memory list with a persistent database like PostgreSQL or MongoDB.
 - **Full CRUD for Features**: Add `POST`, `PUT`, and `DELETE` methods to create, update, and delete features.
