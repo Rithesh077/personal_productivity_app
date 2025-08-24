@@ -21,7 +21,7 @@ This is a personal REST API designed to manage various productivity features lik
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/Rithesh077/personal_productivity_app
    ```
 2. **Install dependencies:**
    ```bash
@@ -35,6 +35,7 @@ This is a personal REST API designed to manage various productivity features lik
 
 ## Future Enhancements
 
+- **Schedule Manager**: Implement a full 7-day calendar grid to allow for time-blocking and scheduling of tasks throughout the week.
 - **User Authentication**: Implement user accounts and JWT (JSON Web Tokens) for secure endpoints.
 - **Database Integration**: Replace the in-memory list with a persistent database like PostgreSQL or MongoDB.
 - **Full CRUD for Features**: Add `POST`, `PUT`, and `DELETE` methods to create, update, and delete features.
