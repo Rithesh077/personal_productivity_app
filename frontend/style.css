@@ -1,0 +1,28 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 2rem;
+  background: #f7f9fc;
+}
+h1 {
+  color: #333;
+}
+form {
+  margin-bottom: 1rem;
+}
+input, button {
+  margin: 0.2rem;
+  padding: 0.5rem;
+}
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+li {
+  margin: 0.5rem 0;
+  background: #fff;
+  padding: 0.5rem;
+  border-radius: 6px;
+}
+button {
+  cursor: pointer;
+}

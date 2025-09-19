@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Personal Productivity App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Schedule Manager</h1>
+
+  <form id="scheduleForm">
+    <input type="text" id="title" placeholder="Event Title" required>
+    <input type="datetime-local" id="datetime" required>
+    <input type="text" id="note" placeholder="Optional Note">
+    <button type="submit">Add Event</button>
+  </form>
+
+  <h2>Your schedule</h2>
+  <ul id="scheduleList"></ul>
+
+  <script src="script.js"></script>
+</body>
+</html>
