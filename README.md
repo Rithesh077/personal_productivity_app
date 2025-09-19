@@ -1,54 +1,73 @@
-# Personal Productivity API
+# Personal Productivity App
 
-This is a personal REST API designed to manage various productivity features like tasks, notes, and fitness tracking.
+A simple **personal productivity application** built with **FastAPI (backend)** and **HTML/CSS/JS (frontend)**.  
+It includes features like task management, note-taking, and a working **Schedule Manager** with a web interface.
 
 ## Features
 
-- **Task Management**: Organize and prioritize your tasks effectively.
-- **Note Taking**: Capture your thoughts and ideas in a structured way.
-- **Calendar Integration**: Sync your tasks with your calendar for better planning.
-- **Habit Tracking**: Monitor your habits and stay consistent.
-- **Fitness Tracker**: Track your workouts and physical activities.
-- **Schedule Manager**: Manage your schedule efficiently.
+- **Task Management** – Organize and prioritize your tasks.
+- **Note Taking** – Capture your thoughts and ideas.
+- **Calendar Integration** – Sync tasks with a calendar.
+- **Habit Tracking** – Monitor your habits consistently.
+- **Fitness Tracker** – Track workouts and activities.
+- **Schedule Manager** – Add, view, and delete events (with frontend UI).
 
-## API Endpoints
+## Prerequisites
 
-| Method | Endpoint         | Description                          |
-| ------ | ---------------- | ------------------------------------ |
-| `GET`  | `/features`      | Retrieve a list of all features.     |
-| `GET`  | `/features/<id>` | Retrieve a single feature by its ID. |
-| `POST` | `/features`      | Add a new feature to the list        |
+- Python **3.9+**
+- Git
 
-## How to Run Locally
+## Setup & Usage
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Rithesh077/personal_productivity_app
-   ```
-2. **Create a virtual environment(optional):**
+### 1. Clone the repository
 
-   ```bash
-   python -m venv venv
-   #Windows:venv/Scripts/activate
-   #macOS/Linux:source venv/bin/activate
-   ```
+```bash
+git clone https://github.com/Rithesh077/personal_productivity_app
+cd personal_productivity_app
+```
 
-3. **Install dependencies:**
-   ```bash
-   pip install Flask
-   ```
-4. **Run the application:**
-   ```bash
-   python app.py
-   ```
-   The server will be running at `http://127.0.0.1:5000`.
+### 2. Creat and activate a virtual environment:
 
-## Future Enhancements
+```bash
+python -m venv .venv
+# Windows
+.\.venv\Scripts\activate
+# macOS/Linux
+source .venv/bin/activate
+```
 
-- **Frontend Integration**: Serve a web-based UI (from the `frontend/` directory) alongside the API, allowing users to interact with features visually instead of only through REST calls.
-- **List all features**: Implement GET/features method to list all the existing features.
-- **User Authentication**: Implement user accounts and JWT (JSON Web Tokens) for secure endpoints.
-- **Database Integration**: Replace the in-memory list with a persistent database like PostgreSQL or MongoDB.
-- **Full CRUD for Features**: Add `POST`, `PUT`, and `DELETE` methods to create, update, and delete features.
-- **Task Management Module**: Build out the full functionality for the "Task Management" feature with its own dedicated endpoints (e.g., `/tasks`).
-- **Deployment**: Deploy the application to a cloud service like Heroku or AWS.
+### 3.Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4.Run the backend server:
+
+```bash
+uvicorn backend.app:app --reload
+```
+
+The API will be running at http://127.0.0.1:8000/
+
+### 5.Open the frontend
+
+- Go to the frontend/ folder.
+- Open index.html in your browser.
+- You can now add, view, and delete schedule items.
+
+## API Endpoints:
+
+## Features
+
+| Method | Endpoint | Description |
+| GET | `/` | App metadata + list of all features|
+| GET | `/features/{id}` | Retrieve a single feature by ID |
+| POST | `/features` | Add a new feature |
+
+## Schedule Manager
+
+| Method | Endpoint | Description |
+| GET | `/schedule` | List all schedule items |
+| POST | `/schedule` | Add a new schedule item |
+| DELETE | `/schedule/{id}` | Delete a schedule item by ID |
