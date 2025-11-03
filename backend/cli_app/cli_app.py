@@ -1,16 +1,21 @@
 from datetime import datetime
-from backend.cli_app.models.task import Task
-from backend.cli_app.models.schedule import ScheduleItem
-from backend.cli_app.utils.storage import load_data, save_data
-
-TASK_FILE = "backend/cli_app/data/tasks.json"
-SCHEDULE_FILE = "backend/cli_app/data/schedule.json"
+from models.task import Task
+from models.schedule import ScheduleItem
+from utils.storage import load_data, save_data
+TASK_FILE = "data/tasks.json"
+SCHEDULE_FILE = "data/schedule.json"
 
 
 def add_task():
     title = input("Enter task title: ")
-    priority = int(input("Enter priority (1-10): "))
+    try:
+        priority = int(input("Enter priority (1-10): "))
+    except ValueError:
+        print("Invalid input for priority. Please enter a number.")
+        return
+
     due_time = input("Enter due time (YYYY-MM-DD HH:MM): ")
+
     if priority < 1 or priority > 10:
         print("Priority must be between 1 and 10.")
         return
@@ -70,7 +75,13 @@ def view_schedule():
 
 def mark_task_done():
     tasks = load_data(TASK_FILE)
-    task_id = int(input("Enter task ID to mark as done: "))
+
+    try:
+        task_id = int(input("Enter task ID to mark as done: "))
+    except ValueError:
+        print("Invalid ID. Please enter a number.")
+        return
+
     for t in tasks:
         if t["id"] == task_id:
             t["status"] = "Completed"
@@ -82,7 +93,13 @@ def mark_task_done():
 
 def delete_task():
     tasks = load_data(TASK_FILE)
-    task_id = int(input("Enter task ID to delete: "))
+
+    try:
+        task_id = int(input("Enter task ID to delete: "))
+    except ValueError:
+        print("Invalid ID. Please enter a number.")
+        return
+
     tasks = [t for t in tasks if t["id"] != task_id]
     save_data(TASK_FILE, tasks)
     print("🗑 Task deleted.")
