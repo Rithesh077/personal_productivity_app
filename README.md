@@ -1,73 +1,53 @@
-# Personal Productivity App
+# Stride
 
-A simple **personal productivity application** built with **FastAPI (backend)** and **HTML/CSS/JS (frontend)**.  
-It includes features like task management, note-taking, and a working **Schedule Manager** with a web interface.
+**Plan. Execute. Improve.**
 
-## Features
+A PWA that answers one question: *"Did I actually do what I planned today?"*
 
-- **Task Management** – Organize and prioritize your tasks.
-- **Note Taking** – Capture your thoughts and ideas.
-- **Calendar Integration** – Sync tasks with a calendar.
-- **Habit Tracking** – Monitor your habits consistently.
-- **Fitness Tracker** – Track workouts and activities.
-- **Schedule Manager** – Add, view, and delete events (with frontend UI).
+## What it does
 
-## Prerequisites
+1. **Evening** — Plan tomorrow's tasks
+2. **Next day** — Work through the list, check off what you actually did
+3. **Review** — See your follow-through rate and 7-day trends
+4. **Repeat** — Plan better, informed by your own data
 
-- Python **3.9+**
-- Git
+No AI. No integrations. No account. Runs entirely in your browser using localStorage.
 
-## Setup & Usage
+## Tech
 
-### 1. Clone the repository
+- **[Flet](https://flet.dev)** — Python → Web/Desktop/Mobile
+- **Client storage** — Zero backend, all data stays in your browser
+- **PWA** — Add to homescreen for quick access
 
-```bash
-git clone https://github.com/Rithesh077/personal_productivity_app
-cd personal_productivity_app
-```
-
-### 2. Creat and activate a virtual environment:
+## Run locally
 
 ```bash
-python -m venv .venv
-# Windows
-.\.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
+uv run flet run --web
 ```
 
-### 3.Install dependencies:
+## Build for deployment
 
 ```bash
-pip install -r requirements.txt
+uv run flet build web -v
 ```
 
-### 4.Run the backend server:
+Deploy the `build/web` folder to GitHub Pages, Cloudflare Pages, or any static host.
 
-```bash
-uvicorn backend.app:app --reload
+## Project structure
+
+```
+src/
+├── main.py              # App shell, theme, navigation
+├── views/
+│   ├── planner.py       # Daily planner (Today/Tomorrow)
+│   └── analytics.py     # 7-day analytics dashboard
+├── components/
+│   ├── task_card.py      # Task card with checkbox
+│   └── stat_card.py      # Metric display card
+└── services/
+    └── storage.py        # Client storage abstraction
 ```
 
-The API will be running at http://127.0.0.1:8000/
+## License
 
-### 5.Open the frontend
-
-- Go to the frontend/ folder.
-- Open index.html in your browser.
-- You can now add, view, and delete schedule items.
-
-## API Endpoints:
-
-## Features
-
-| Method | Endpoint | Description |
-| GET | `/` | App metadata + list of all features|
-| GET | `/features/{id}` | Retrieve a single feature by ID |
-| POST | `/features` | Add a new feature |
-
-## Schedule Manager
-
-| Method | Endpoint | Description |
-| GET | `/schedule` | List all schedule items |
-| POST | `/schedule` | Add a new schedule item |
-| DELETE | `/schedule/{id}` | Delete a schedule item by ID |
+MIT
