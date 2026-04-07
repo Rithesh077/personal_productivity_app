@@ -50,11 +50,10 @@ def format_local_date(utc_str: str) -> str:
 
 
 def get_default_deadline() -> str:
-    """Get default deadline: 11:59 PM local time today, stored as UTC."""
+    """Get default deadline: 24 hours from now, stored as UTC."""
     now = datetime.now()
-    # Set to 11:59:59 PM today
-    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=0)
-    return local_to_utc(end_of_day)
+    deadline = now + timedelta(hours=24)
+    return local_to_utc(deadline)
 
 
 def is_past_deadline(deadline_utc: Optional[str]) -> bool:
@@ -109,3 +108,33 @@ def time_until_deadline(deadline_utc: Optional[str]) -> str:
     else:
         days = diff.days
         return f"{days} day{'s' if days > 1 else ''} left"
+
+
+# ── Analytics helpers ───────────────────────────────────────────
+
+
+def is_same_day(utc_str1: str, utc_str2: str) -> bool:
+    """Check if two UTC timestamps are on the same local day."""
+    if not utc_str1 or not utc_str2:
+        return False
+    dt1 = utc_to_local(utc_str1)
+    dt2 = utc_to_local(utc_str2)
+    return dt1.date() == dt2.date()
+
+
+def was_completed_before_deadline(
+    completed_at: Optional[str], deadline: Optional[str]
+) -> bool:
+    """Check if item was completed before its deadline."""
+    if not completed_at or not deadline:
+        return False
+    completed_dt = datetime.fromisoformat(completed_at.replace("Z", "+00:00"))
+    deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+    return completed_dt <= deadline_dt
+
+
+def was_same_day_execution(created_at: str, completed_at: Optional[str]) -> bool:
+    """Check if item was completed on the same day it was created."""
+    if not completed_at:
+        return False
+    return is_same_day(created_at, completed_at)

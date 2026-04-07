@@ -6,21 +6,45 @@ We serialize goals to JSON string for storage.
 
 import json
 from typing import Optional
+import uuid
 from models.goal import Goal
+import flet as ft
 
 STORAGE_KEY = "stride.goals"
 
 
+def _ensure_id(value: Optional[str]) -> str:
+    """Return an existing ID or generate a new one."""
+    return value or str(uuid.uuid4())
+
+
+def _normalize_goal(goal: Goal) -> Goal:
+    """Ensure IDs and positions are present before saving."""
+    goal.id = _ensure_id(goal.id)
+
+    for task_idx, task in enumerate(goal.tasks):
+        task.id = _ensure_id(task.id)
+        task.position = task_idx
+
+        for subtask_idx, subtask in enumerate(task.sub_tasks):
+            subtask.id = _ensure_id(subtask.id)
+            subtask.position = subtask_idx
+
+    return goal
+
+
 async def save_goals(page, goals: list[Goal]):
     """Save all goals to client storage as JSON string."""
-    data = [g.to_dict() for g in goals]
+    data = [_normalize_goal(g).to_dict() for g in goals]
     json_str = json.dumps(data)
-    await page.shared_preferences.set(STORAGE_KEY, json_str)
+    prefs = ft.SharedPreferences()
+    await prefs.set(STORAGE_KEY, json_str)
 
 
 async def load_goals(page) -> list[Goal]:
     """Load all goals from client storage."""
-    json_str = await page.shared_preferences.get(STORAGE_KEY)
+    prefs = ft.SharedPreferences()
+    json_str = await prefs.get(STORAGE_KEY)
     if not json_str:
         return []
     try:
@@ -32,6 +56,7 @@ async def load_goals(page) -> list[Goal]:
 
 async def save_goal(page, goal: Goal):
     """Save or update a single goal."""
+    goal = _normalize_goal(goal)
     goals = await load_goals(page)
     # Find and replace if exists, otherwise append
     found = False
@@ -63,5 +88,5 @@ async def get_goal(page, goal_id: str) -> Optional[Goal]:
 
 async def clear_all_goals(page):
     """Clear all goals from storage."""
-    await page.shared_preferences.remove(STORAGE_KEY)
-
+    prefs = ft.SharedPreferences()
+    await prefs.remove(STORAGE_KEY)
