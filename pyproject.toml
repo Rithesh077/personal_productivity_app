@@ -5,7 +5,7 @@ description = "Plan. Execute. Improve. Track your daily follow-through rate."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-    { name = "Rithesh", email = "you@example.com" }
+    { name = "Rithesh", email = "[EMAIL_ADDRESS]" }
 ]
 dependencies = [
     "flet>=0.83.0"
@@ -26,3 +26,11 @@ copyright = "Copyright (C) 2026 Stride"
 
 [tool.flet.app]
 path = "src"
+
+[tool.flet.app.web]
+name = "Stride"
+short_name = "Stride"
+description = "Plan. Execute. Improve. Track your daily follow-through rate."
+theme_color = "#0B0F1A"
+background_color = "#0B0F1A"
+

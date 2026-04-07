@@ -2,7 +2,7 @@
 
 **Plan. Execute. Improve.**
 
-A PWA that answers one question: *"Did I actually do what I planned today?"*
+A PWA that answers one question: _"Did I actually do what I planned today?"_
 
 ## What it does
 
@@ -32,22 +32,3 @@ uv run flet build web -v
 ```
 
 Deploy the `build/web` folder to GitHub Pages, Cloudflare Pages, or any static host.
-
-## Project structure
-
-```
-src/
-├── main.py              # App shell, theme, navigation
-├── views/
-│   ├── planner.py       # Daily planner (Today/Tomorrow)
-│   └── analytics.py     # 7-day analytics dashboard
-├── components/
-│   ├── task_card.py      # Task card with checkbox
-│   └── stat_card.py      # Metric display card
-└── services/
-    └── storage.py        # Client storage abstraction
-```
-
-## License
-
-MIT

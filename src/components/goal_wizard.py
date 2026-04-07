@@ -1,9 +1,10 @@
 """Goal creation wizard for Stride - multi-step guided flow."""
 
 import flet as ft
+from datetime import datetime, time
 from typing import Callable, Optional
-from models.goal import Goal, SubTask, Step
-from utils.time_utils import utc_now, get_default_deadline
+from models.goal import Goal, Task, SubTask
+from utils.time_utils import utc_now, get_default_deadline, local_to_utc, format_local_datetime
 
 # Design tokens
 TEAL = "#00D9A6"
@@ -18,26 +19,50 @@ BG = "#0B0F1A"
 class GoalWizard:
     """Multi-step wizard for creating goals with tasks and sub-tasks."""
 
-    def __init__(self, page: ft.Page, on_save: Callable[[Goal], None], on_cancel: Callable):
+    def __init__(self, page: ft.Page, on_save: Callable[[Goal], None], on_cancel: Callable, initial_goal: Optional[Goal] = None):
         self.page = page
         self.on_save = on_save
         self.on_cancel = on_cancel
+        self.initial_goal = initial_goal
+        self.editing = initial_goal is not None
+        self.original_goal_id = initial_goal.id if initial_goal else None
 
         # Wizard state
         self.step = 0  # 0=goal title, 1=tasks (with inline sub-tasks)
-        self.goal_title = ""
-        self.tasks: list[dict] = []  # [{title, subtasks: [str], expanded: bool}]
-        self.use_custom_deadline = False
-        self.custom_deadline: Optional[str] = None
+        self.goal_title = initial_goal.title if initial_goal else ""
+
+        # Each entry preserves original model objects when editing
+        self.tasks: list[dict] = []
+        if initial_goal:
+            for task in initial_goal.tasks:
+                self.tasks.append({
+                    "title": task.title,
+                    "subtasks": [st.title for st in task.sub_tasks],
+                    "expanded": False,
+                    "_task": task,
+                    "_subtask_models": list(task.sub_tasks),
+                })
+
+        self.use_custom_deadline = initial_goal.has_custom_deadline if initial_goal else False
+        self.custom_deadline_dt: Optional[datetime] = None
+        if initial_goal and initial_goal.has_custom_deadline and initial_goal.deadline:
+            try:
+                self.custom_deadline_dt = datetime.fromisoformat(
+                    initial_goal.deadline.replace("Z", "+00:00")
+                ).astimezone()
+            except Exception:
+                self.custom_deadline_dt = None
 
         # UI elements
         self.content = ft.Container()
+        self.deadline_display = ft.Text("", size=12, color=TEAL)
         self._build_step_0()
 
     def _build_step_0(self):
-        """Step 0: Enter goal title."""
+        """Step 0: Enter goal title + deadline settings."""
         self.title_input = ft.TextField(
             hint_text="What's your goal?",
+            value=self.goal_title,
             border_radius=12,
             bgcolor=CARD_BG,
             border_color=SURFACE,
@@ -49,19 +74,16 @@ class GoalWizard:
             on_submit=lambda e: self._next_step(),
         )
 
-        self.content.content = ft.Column(
+        # Update deadline display text
+        self._update_deadline_display()
+
+        # Deadline section
+        deadline_section = ft.Column(
             controls=[
-                ft.Text("Create New Goal", size=22,
-                        weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                ft.Text("Step 1 of 2: Define your goal",
-                        size=13, color=TEXT_SECONDARY),
-                ft.Container(height=16),
-                self.title_input,
-                ft.Container(height=8),
                 ft.Row(
                     controls=[
                         ft.Checkbox(
-                            label="Set custom deadline",
+                            label="Custom deadline",
                             value=self.use_custom_deadline,
                             active_color=TEAL,
                             label_style=ft.TextStyle(
@@ -69,8 +91,32 @@ class GoalWizard:
                             on_change=lambda e: self._toggle_deadline(
                                 e.control.value),
                         ),
+                        ft.Container(expand=True),
+                        ft.TextButton(
+                            "Pick date",
+                            icon=ft.Icons.CALENDAR_MONTH_ROUNDED,
+                            on_click=lambda e: self._open_date_picker(),
+                            style=ft.ButtonStyle(color=TEAL),
+                            visible=self.use_custom_deadline,
+                        ),
                     ],
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
+                self.deadline_display,
+            ],
+            spacing=4,
+        )
+
+        self.content.content = ft.Column(
+            controls=[
+                ft.Text("Create New Goal" if not self.editing else "Edit Goal", size=22,
+                        weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                ft.Text("Step 1 of 2: Define your goal",
+                        size=13, color=TEXT_SECONDARY),
+                ft.Container(height=16),
+                self.title_input,
+                ft.Container(height=8),
+                deadline_section,
                 ft.Container(height=16),
                 ft.Row(
                     controls=[
@@ -94,10 +140,100 @@ class GoalWizard:
         )
         self.page.update()
 
+    def _update_deadline_display(self):
+        """Update the deadline display text."""
+        if self.use_custom_deadline and self.custom_deadline_dt:
+            self.deadline_display.value = f"Due: {self.custom_deadline_dt.strftime('%b %d, %Y, %I:%M %p')}"
+            self.deadline_display.color = TEAL
+            self.deadline_display.visible = True
+        elif not self.use_custom_deadline:
+            self.deadline_display.value = "Default: 24 hours from creation"
+            self.deadline_display.color = TEXT_MUTED
+            self.deadline_display.visible = True
+        else:
+            self.deadline_display.value = "No date selected. Tap 'Pick date'."
+            self.deadline_display.color = TEXT_MUTED
+            self.deadline_display.visible = True
+
     def _toggle_deadline(self, value: bool):
         self.use_custom_deadline = value
-        # Could add date picker here in future
-        self.page.update()
+        if not value:
+            self.custom_deadline_dt = None
+        self._build_step_0()
+
+    def _open_date_picker(self):
+        """Open DatePicker dialog."""
+        initial_date = self.custom_deadline_dt or datetime.now()
+
+        def on_date_change(e):
+            selected_date = date_picker.value
+            # Ask about specific time
+            self._show_time_option(selected_date)
+
+        date_picker = ft.DatePicker(
+            value=initial_date,
+            first_date=datetime.now(),
+            last_date=datetime(year=2030, month=12, day=31),
+            help_text="Set deadline date",
+            confirm_text="Next",
+            on_change=on_date_change,
+        )
+        self.page.show_dialog(date_picker)
+
+    def _show_time_option(self, selected_date):
+        """After date selected, ask if user wants to set specific time."""
+
+        def use_default_time(e=None):
+            self.page.pop_dialog()
+            # Default: 11:59 PM on selected date
+            dt = selected_date if isinstance(selected_date, datetime) else datetime.combine(selected_date, time(23, 59, 59))
+            self.custom_deadline_dt = dt.replace(hour=23, minute=59, second=59)
+            self._update_deadline_display()
+            self._build_step_0()
+
+        def open_time_picker(e=None):
+            self.page.pop_dialog()
+
+            def on_time_change(e):
+                dt = selected_date if isinstance(selected_date, datetime) else datetime.combine(selected_date, time(23, 59, 59))
+                self.custom_deadline_dt = dt.replace(
+                    hour=time_picker.value.hour,
+                    minute=time_picker.value.minute,
+                    second=0,
+                )
+                self._update_deadline_display()
+                self._build_step_0()
+
+            time_picker = ft.TimePicker(
+                value=time(23, 59),
+                help_text="Set deadline time",
+                on_change=on_time_change,
+            )
+            self.page.show_dialog(time_picker)
+
+        dlg = ft.AlertDialog(
+            title=ft.Text("Set specific time?", size=16,
+                          weight=ft.FontWeight.BOLD),
+            content=ft.Text(
+                "Default deadline time is 11:59 PM.\nChoose a specific time or use the default.",
+                size=13, color=TEXT_SECONDARY,
+            ),
+            actions=[
+                ft.TextButton(
+                    "Use Default (11:59 PM)",
+                    on_click=use_default_time,
+                    style=ft.ButtonStyle(color=TEXT_SECONDARY),
+                ),
+                ft.FilledButton(
+                    "Set Time",
+                    icon=ft.Icons.ACCESS_TIME_ROUNDED,
+                    bgcolor=TEAL,
+                    color=BG,
+                    on_click=open_time_picker,
+                ),
+            ],
+        )
+        self.page.show_dialog(dlg)
 
     def _build_step_1(self):
         """Step 1: Add tasks. Click on them to add sub-tasks."""
@@ -120,11 +256,12 @@ class GoalWizard:
 
         self.content.content = ft.Column(
             controls=[
-                ft.Text("Create New Goal", size=22,
+                ft.Text("Create New Goal" if not self.editing else "Edit Goal", size=22,
                         weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                 ft.Text(f"Step 2 of 2: Add tasks for \"{self.goal_title}\"",
                         size=13, color=TEXT_SECONDARY),
-                ft.Text("Click on a task to add sub-tasks", size=12, color=TEXT_MUTED, italic=True),
+                ft.Text("Click on a task to add sub-tasks",
+                        size=12, color=TEXT_MUTED, italic=True),
                 ft.Container(height=12),
                 ft.Row(
                     controls=[
@@ -156,7 +293,7 @@ class GoalWizard:
                             style=ft.ButtonStyle(color=TEXT_MUTED),
                         ) if not self.tasks else ft.Container(),
                         ft.FilledButton(
-                            "Save Goal",
+                            "Update Goal" if self.editing else "Save Goal",
                             icon=ft.Icons.CHECK_ROUNDED,
                             bgcolor=TEAL,
                             color=BG,
@@ -196,12 +333,14 @@ class GoalWizard:
                     content=ft.Row(
                         controls=[
                             ft.Text(f"{j + 1}.", size=12, color=TEXT_MUTED),
-                            ft.Text(subtask_text, size=13, color=TEXT_SECONDARY, expand=True),
+                            ft.Text(subtask_text, size=13,
+                                    color=TEXT_SECONDARY, expand=True),
                             ft.IconButton(
                                 icon=ft.Icons.CLOSE_ROUNDED,
                                 icon_color=TEXT_MUTED,
                                 icon_size=14,
-                                on_click=lambda e, idx=index, sidx=j: self._remove_subtask(idx, sidx),
+                                on_click=lambda e, idx=index, sidx=j: self._remove_subtask(
+                                    idx, sidx),
                             ),
                         ],
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -236,7 +375,8 @@ class GoalWizard:
                             icon_color=TEAL,
                             icon_size=24,
                             data=subtask_input_field,
-                            on_click=lambda e: self._add_subtask_from_field(e.control.data),
+                            on_click=lambda e: self._add_subtask_from_field(
+                                e.control.data),
                         ),
                     ],
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -254,8 +394,10 @@ class GoalWizard:
                             controls=[
                                 ft.Icon(ft.Icons.SUBDIRECTORY_ARROW_RIGHT_ROUNDED,
                                         color=TEAL if is_expanded else TEXT_MUTED, size=18),
-                                ft.Text(task["title"], size=14, color=TEXT_PRIMARY, expand=True),
-                                ft.Text(f"{len(task['subtasks'])} sub-tasks", size=12, color=TEXT_MUTED),
+                                ft.Text(task["title"], size=14,
+                                        color=TEXT_PRIMARY, expand=True),
+                                ft.Text(
+                                    f"{len(task['subtasks'])} sub-tasks", size=12, color=TEXT_MUTED),
                                 ft.Icon(
                                     ft.Icons.EXPAND_LESS_ROUNDED if is_expanded else ft.Icons.EXPAND_MORE_ROUNDED,
                                     color=TEXT_SECONDARY,
@@ -265,13 +407,16 @@ class GoalWizard:
                                     icon=ft.Icons.DELETE_ROUNDED,
                                     icon_color=TEXT_MUTED,
                                     icon_size=16,
-                                    on_click=lambda e, idx=index: self._remove_task(idx),
+                                    on_click=lambda e, idx=index: self._remove_task(
+                                        idx),
                                 ),
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        on_click=lambda e, idx=index: self._toggle_task_expand(idx),
-                        padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+                        on_click=lambda e, idx=index: self._toggle_task_expand(
+                            idx),
+                        padding=ft.Padding.symmetric(
+                            horizontal=12, vertical=8),
                     ),
                     expanded_content,
                 ],
@@ -283,7 +428,6 @@ class GoalWizard:
         )
 
     def _toggle_task_expand(self, index: int):
-        """Toggle expansion of a task to show/hide sub-task input."""
         for i, task in enumerate(self.tasks):
             if i == index:
                 task["expanded"] = not task.get("expanded", False)
@@ -293,24 +437,30 @@ class GoalWizard:
         self.page.update()
 
     def _add_subtask_from_field(self, input_field):
-        """Add sub-task from the input field."""
         if input_field and input_field.value and input_field.value.strip():
             idx = input_field.data
             self.tasks[idx]["subtasks"].append(input_field.value.strip())
+            if "_subtask_models" in self.tasks[idx]:
+                self.tasks[idx]["_subtask_models"].append(None)
             input_field.value = ""
             self._refresh_tasks_list()
             self.page.update()
 
     def _remove_subtask(self, task_index: int, subtask_index: int):
-        """Remove a sub-task from a task."""
         self.tasks[task_index]["subtasks"].pop(subtask_index)
+        if "_subtask_models" in self.tasks[task_index]:
+            models = self.tasks[task_index]["_subtask_models"]
+            if subtask_index < len(models):
+                models.pop(subtask_index)
         self._refresh_tasks_list()
         self.page.update()
 
     def _add_task(self):
         title = self.task_input.value.strip()
         if title:
-            self.tasks.append({"title": title, "subtasks": [], "expanded": False})
+            self.tasks.append(
+                {"title": title, "subtasks": [], "expanded": False,
+                 "_task": None, "_subtask_models": []})
             self.task_input.value = ""
             self._refresh_tasks_list()
             self.page.update()
@@ -335,30 +485,70 @@ class GoalWizard:
             self._build_step_0()
 
     def _save_goal(self):
-        """Create and save the goal."""
+        """Create and save the goal, preserving existing model state when editing."""
         now = utc_now()
-        deadline = self.custom_deadline if self.use_custom_deadline else get_default_deadline()
 
-        # Build goal structure (tasks -> SubTask, subtasks -> Step)
-        sub_tasks = []
-        for task_data in self.tasks:
-            steps = [
-                Step(title=subtask_title, created_at=now)
-                for subtask_title in task_data["subtasks"]
-            ]
-            sub_tasks.append(SubTask(
-                title=task_data["title"],
-                created_at=now,
-                steps=steps,
-            ))
+        # Compute deadline
+        if self.use_custom_deadline and self.custom_deadline_dt:
+            deadline = local_to_utc(self.custom_deadline_dt)
+        else:
+            deadline = get_default_deadline()
 
-        goal = Goal(
-            title=self.goal_title,
-            created_at=now,
-            deadline=deadline,
-            sub_tasks=sub_tasks,
-        )
+        tasks = []
+        for task_position, task_data in enumerate(self.tasks):
+            original_task = task_data.get("_task")
+            subtask_models = task_data.get("_subtask_models", [])
 
+            sub_tasks = []
+            for subtask_position, subtask_title in enumerate(task_data["subtasks"]):
+                original_subtask = subtask_models[subtask_position] if subtask_position < len(subtask_models) else None
+                if original_subtask is not None:
+                    if subtask_title != original_subtask.title:
+                        original_subtask.updated_at = now
+                    original_subtask.title = subtask_title
+                    original_subtask.position = subtask_position
+                    sub_tasks.append(original_subtask)
+                else:
+                    sub_tasks.append(
+                        SubTask(
+                            title=subtask_title,
+                            created_at=now,
+                            position=subtask_position,
+                        )
+                    )
+
+            if original_task is not None:
+                if task_data["title"] != original_task.title:
+                    original_task.updated_at = now
+                original_task.title = task_data["title"]
+                original_task.position = task_position
+                original_task.sub_tasks = sub_tasks
+                tasks.append(original_task)
+            else:
+                tasks.append(
+                    Task(
+                        title=task_data["title"],
+                        created_at=now,
+                        position=task_position,
+                        sub_tasks=sub_tasks,
+                    )
+                )
+
+        goal_kwargs = {
+            "title": self.goal_title,
+            "created_at": self.initial_goal.created_at if self.initial_goal else now,
+            "updated_at": now if self.initial_goal else None,
+            "deadline": deadline,
+            "has_custom_deadline": self.use_custom_deadline,
+            "tasks": tasks,
+        }
+
+        if self.initial_goal:
+            goal_kwargs["id"] = self.initial_goal.id
+            goal_kwargs["is_completed"] = self.initial_goal.is_completed
+            goal_kwargs["completed_at"] = self.initial_goal.completed_at
+
+        goal = Goal(**goal_kwargs)
         self.on_save(goal)
 
     def build(self) -> ft.Container:
