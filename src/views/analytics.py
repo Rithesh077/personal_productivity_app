@@ -1,4 +1,4 @@
-"""Analytics view for Stride — Planned vs Executed dashboard."""
+"""analytics view - planned vs executed dashboard."""
 
 import flet as ft
 
@@ -20,37 +20,32 @@ from utils.math_utils import safe_percentage
 from constants.design import (
     TEAL, AMBER, RED, PURPLE, MUTED, CARD_BG, SURFACE,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED, CHART_MIN_HEIGHT,
-    TITLE_TRUNCATE_CHART, TITLE_TRUNCATE_PROGRESS, TITLE_TRUNCATE_HISTORY
+    TITLE_TRUNCATE_CHART, TITLE_TRUNCATE_PROGRESS, TITLE_TRUNCATE_HISTORY,
 )
 
 
 def build_analytics(page: ft.Page):
-    """Build the analytics view with Planned vs Executed metrics."""
+    """build the analytics view with planned vs executed metrics."""
 
-    # ── Create all sections with initial loading state ──────────
+    # loading state
     stats_row = ft.Row(
         controls=[
-            StatCard("Active", "—", ft.Icons.FLAG_ROUNDED, TEAL),
-            StatCard("Completed", "—", ft.Icons.CHECK_CIRCLE_ROUNDED, AMBER),
-            StatCard("Overdue", "—", ft.Icons.WARNING_ROUNDED, MUTED),
+            StatCard("Active", "--", ft.Icons.FLAG_ROUNDED, TEAL),
+            StatCard("Completed", "--", ft.Icons.CHECK_CIRCLE_ROUNDED, AMBER),
+            StatCard("Overdue", "--", ft.Icons.WARNING_ROUNDED, MUTED),
         ],
-        spacing=10,
-        wrap=True,
+        spacing=10, wrap=True,
     )
 
-    # ── Consolidated Metrics Section ────────────────────────────
     metrics_cards_row = ft.Row(
         controls=[
-            StatCard("Completion Rate", "—",
-                     ft.Icons.TRENDING_UP_ROUNDED, TEAL),
-            StatCard("On-Time %", "—", ft.Icons.EVENT_NOTE_ROUNDED, TEAL),
-            StatCard("Same-Day %", "—", ft.Icons.FLASH_ON_ROUNDED, PURPLE),
+            StatCard("Completion Rate", "--", ft.Icons.TRENDING_UP_ROUNDED, TEAL),
+            StatCard("On-Time %", "--", ft.Icons.EVENT_NOTE_ROUNDED, TEAL),
+            StatCard("Same-Day %", "--", ft.Icons.FLASH_ON_ROUNDED, PURPLE),
         ],
-        spacing=10,
-        wrap=True,
+        spacing=10, wrap=True,
     )
 
-    # ── Chart Visualization Section ─────────────────────────────
     chart_selector = ft.Dropdown(
         width=400,
         options=[
@@ -61,28 +56,20 @@ def build_analytics(page: ft.Page):
             ft.dropdown.Option("Recent Goals Progress"),
         ],
         value="Completion by Level",
-        bgcolor=CARD_BG,
-        border_color=SURFACE,
-        color=TEXT_PRIMARY,
+        bgcolor=CARD_BG, border_color=SURFACE, color=TEXT_PRIMARY,
     )
 
     chart_container = ft.Container(
         content=ft.Text("Loading chart...", color=TEXT_MUTED),
-        padding=20,
-        bgcolor=CARD_BG,
-        border_radius=12,
+        padding=20, bgcolor=CARD_BG, border_radius=12,
     )
 
-    # ── Planned vs Executed Section ─────────────────────────────
     planned_vs_executed_section = ft.Container(
-        content=ft.Text("Loading...", color=TEXT_MUTED),
-        padding=20,
+        content=ft.Text("Loading...", color=TEXT_MUTED), padding=20,
     )
 
-    # ── Recent Activity Section ─────────────────────────────────
     progress_chart_section = ft.Container(
-        content=ft.Text("Loading...", color=TEXT_MUTED),
-        padding=20,
+        content=ft.Text("Loading...", color=TEXT_MUTED), padding=20,
     )
 
     completion_history_section = ft.Container()
@@ -91,7 +78,7 @@ def build_analytics(page: ft.Page):
         try:
             goals = await load_goals(page)
 
-            # ── Basic Stats ─────────────────────────────────────────
+            # basic stats
             total_goals = len(goals)
             completed_goals = sum(1 for g in goals if g.is_completed)
             active_goals = total_goals - completed_goals
@@ -100,25 +87,19 @@ def build_analytics(page: ft.Page):
             )
 
             stats_row.controls = [
-                StatCard("Active", str(active_goals),
-                         ft.Icons.FLAG_ROUNDED, TEAL),
-                StatCard("Completed", str(completed_goals),
-                         ft.Icons.CHECK_CIRCLE_ROUNDED, AMBER),
-                StatCard(
-                    "Overdue",
-                    str(overdue_goals),
-                    ft.Icons.WARNING_ROUNDED,
-                    RED if overdue_goals > 0 else MUTED,
-                ),
+                StatCard("Active", str(active_goals), ft.Icons.FLAG_ROUNDED, TEAL),
+                StatCard("Completed", str(completed_goals), ft.Icons.CHECK_CIRCLE_ROUNDED, AMBER),
+                StatCard("Overdue", str(overdue_goals), ft.Icons.WARNING_ROUNDED,
+                         RED if overdue_goals > 0 else MUTED),
             ]
 
-            # ── Planned vs Executed Stats ───────────────────────────
+            # planned vs executed stats
             goal_stats = {"total": 0, "completed": 0, "on_time": 0, "same_day": 0,
                           "custom_deadline_count": 0, "default_deadline_count": 0}
             task_stats = {"total": 0, "completed": 0, "on_time": 0, "same_day": 0,
                           "custom_deadline_count": 0, "default_deadline_count": 0}
-            subtask_stats = {"total": 0, "completed": 0, "on_time": 0,
-                             "same_day": 0, "custom_deadline_count": 0, "default_deadline_count": 0}
+            subtask_stats = {"total": 0, "completed": 0, "on_time": 0, "same_day": 0,
+                             "custom_deadline_count": 0, "default_deadline_count": 0}
 
             for goal in goals:
                 has_custom = getattr(goal, 'has_custom_deadline', False)
@@ -170,73 +151,46 @@ def build_analytics(page: ft.Page):
                                 if was_same_day_execution(subtask.created_at, subtask.completed_at):
                                     subtask_stats["same_day"] += 1
 
-            def calc_pct(num, denom):
-                return safe_percentage(num, denom)
+            calc_pct = safe_percentage
 
-            # ─── Calculate Overall Metrics ────────────────────────
-            overall_completion_pct = calc_pct(
-                goal_stats["completed"], goal_stats["total"])
+            # overall metrics
+            overall_completion_pct = calc_pct(goal_stats["completed"], goal_stats["total"])
+            overall_on_time_pct = calc_pct(goal_stats["on_time"], goal_stats["custom_deadline_count"])
+            overall_same_day_pct = calc_pct(goal_stats["same_day"], goal_stats["default_deadline_count"])
 
-            overall_on_time_pct = calc_pct(
-                goal_stats["on_time"], goal_stats["custom_deadline_count"])
-
-            overall_same_day_pct = calc_pct(
-                goal_stats["same_day"], goal_stats["default_deadline_count"])
-
-            # Update metrics cards
             metrics_cards_row.controls = [
                 StatCard(
-                    "Completion Rate",
-                    f"{overall_completion_pct}%",
+                    "Completion Rate", f"{overall_completion_pct}%",
                     ft.Icons.TRENDING_UP_ROUNDED,
                     get_performance_color(overall_completion_pct),
                 ),
                 StatCard(
-                    "On-Time %",
-                    f"{overall_on_time_pct}%",
+                    "On-Time %", f"{overall_on_time_pct}%",
                     ft.Icons.EVENT_NOTE_ROUNDED,
                     get_on_time_color(overall_on_time_pct),
                 ) if goal_stats["custom_deadline_count"] > 0 else StatCard(
-                    "On-Time %",
-                    "—",
-                    ft.Icons.EVENT_NOTE_ROUNDED,
-                    MUTED,
+                    "On-Time %", "--", ft.Icons.EVENT_NOTE_ROUNDED, MUTED,
                 ),
                 StatCard(
-                    "Same-Day %",
-                    f"{overall_same_day_pct}%",
+                    "Same-Day %", f"{overall_same_day_pct}%",
                     ft.Icons.FLASH_ON_ROUNDED,
                     get_same_day_color(overall_same_day_pct),
                 ) if goal_stats["default_deadline_count"] > 0 else StatCard(
-                    "Same-Day %",
-                    "—",
-                    ft.Icons.FLASH_ON_ROUNDED,
-                    MUTED,
+                    "Same-Day %", "--", ft.Icons.FLASH_ON_ROUNDED, MUTED,
                 ),
             ]
 
-            # ─── Cache sorted goal lists (once, not on every chart change) ────────
-            recent_goals_sorted = sorted(
-                goals, key=lambda g: g.created_at, reverse=True)[:5]
-            completed_goals_sorted = sorted(
-                [g for g in goals if g.is_completed],
-                key=lambda g: g.completed_at or g.created_at,
-                reverse=True
-            )[:5]
+            # cache sorted goal lists
+            recent_goals_sorted = sorted(goals, key=lambda g: g.created_at, reverse=True)[:5]
 
-            # ─── Chart Rendering Handler ──────────────────────────
-            def render_chart(chart_type: str):
-                """Render the selected chart type (reuses cached sorted lists)."""
+            # chart rendering
+            def render_chart(chart_type):
                 if chart_type == "Completion by Level":
                     return build_completion_by_level_chart(goal_stats, task_stats, subtask_stats)
-
                 elif chart_type == "Status Distribution":
                     return build_status_distribution_chart({
-                        "active": active_goals,
-                        "completed": completed_goals,
-                        "overdue": overdue_goals,
+                        "active": active_goals, "completed": completed_goals, "overdue": overdue_goals,
                     })
-
                 elif chart_type == "On-Time Analysis":
                     on_time = goal_stats["on_time"]
                     late = goal_stats["completed"] - on_time
@@ -244,7 +198,6 @@ def build_analytics(page: ft.Page):
                         {"label": "On-Time", "value": on_time, "color": TEAL},
                         {"label": "Late", "value": late, "color": RED},
                     ], "Goals On-Time vs Late")
-
                 elif chart_type == "Same-Day Execution":
                     same_day = goal_stats["same_day"]
                     not_same_day = goal_stats["completed"] - same_day
@@ -252,111 +205,82 @@ def build_analytics(page: ft.Page):
                         {"label": "Same-Day", "value": same_day, "color": PURPLE},
                         {"label": "Multi-Day", "value": not_same_day, "color": MUTED},
                     ], "Same-Day vs Multi-Day Completion")
-
                 elif chart_type == "Recent Goals Progress":
-                    # Reuse cached sorted goals
                     data = [
                         {
                             "label": g.title[:TITLE_TRUNCATE_CHART] + "..." if len(g.title) > TITLE_TRUNCATE_CHART else g.title,
                             "completed": int(g.completion_percentage()),
                             "total": 100,
-                            "color": TEAL if g.is_completed else (RED if is_past_deadline(g.deadline) and not g.is_completed else AMBER),
+                            "color": TEAL if g.is_completed else (
+                                RED if is_past_deadline(g.deadline) and not g.is_completed else AMBER
+                            ),
                         }
                         for g in recent_goals_sorted
                     ]
                     return build_horizontal_bar_chart(data)
-
                 return ft.Text("Invalid chart type", color=TEXT_MUTED)
 
             def on_chart_selector_change(e):
-                """Handle chart selector dropdown change."""
                 chart_container.content = render_chart(chart_selector.value)
                 page.update()
 
-            # Update the dropdown's change handler
             chart_selector.on_change = on_chart_selector_change
-
-            # Initial chart render
             chart_container.content = render_chart("Completion by Level")
 
-            # ─── Planned vs Executed Section ───────────────────────
+            # detailed breakdown section
             def build_pve_row(label, stats, color):
-                """Build a Planned vs Executed row for one level."""
+                """planned vs executed row for one level."""
                 completion_pct = calc_pct(stats["completed"], stats["total"])
-
-                on_time_pct = calc_pct(
-                    stats["on_time"], stats["custom_deadline_count"])
-                same_day_pct = calc_pct(
-                    stats["same_day"], stats["default_deadline_count"])
+                on_time_pct = calc_pct(stats["on_time"], stats["custom_deadline_count"])
+                same_day_pct = calc_pct(stats["same_day"], stats["default_deadline_count"])
 
                 metrics = [
-                    _metric_box("Completion", f"{completion_pct}%", TEAL if completion_pct >=
-                                80 else AMBER if completion_pct >= 50 else MUTED),
+                    _metric_box("Completion", f"{completion_pct}%",
+                                TEAL if completion_pct >= 80 else AMBER if completion_pct >= 50 else MUTED),
                 ]
 
                 if on_time_pct > 0 and stats["custom_deadline_count"] > 0:
-                    metrics.append(
-                        _metric_box(
-                            f"On-Time ({stats['custom_deadline_count']})",
-                            f"{on_time_pct}%",
-                            TEAL if on_time_pct >= 80 else AMBER if on_time_pct >= 50 else RED
-                        )
-                    )
+                    metrics.append(_metric_box(
+                        f"On-Time ({stats['custom_deadline_count']})",
+                        f"{on_time_pct}%",
+                        TEAL if on_time_pct >= 80 else AMBER if on_time_pct >= 50 else RED,
+                    ))
 
                 if same_day_pct > 0 and stats["default_deadline_count"] > 0:
-                    metrics.append(
-                        _metric_box(
-                            f"Same-Day ({stats['default_deadline_count']})",
-                            f"{same_day_pct}%",
-                            TEAL if same_day_pct >= 50 else MUTED
-                        )
-                    )
+                    metrics.append(_metric_box(
+                        f"Same-Day ({stats['default_deadline_count']})",
+                        f"{same_day_pct}%",
+                        TEAL if same_day_pct >= 50 else MUTED,
+                    ))
 
                 return ft.Container(
                     content=ft.Column(
                         controls=[
                             ft.Row(
                                 controls=[
-                                    ft.Icon(ft.Icons.CIRCLE,
-                                            color=color, size=12),
-                                    ft.Text(
-                                        label, size=14, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
+                                    ft.Icon(ft.Icons.CIRCLE, color=color, size=12),
+                                    ft.Text(label, size=14, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
                                     ft.Container(expand=True),
-                                    ft.Text(
-                                        f"{stats['completed']}/{stats['total']}",
-                                        size=13,
-                                        color=TEXT_SECONDARY,
-                                    ),
+                                    ft.Text(f"{stats['completed']}/{stats['total']}",
+                                            size=13, color=TEXT_SECONDARY),
                                 ],
                                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                             ft.Container(height=8),
-                            ft.Row(
-                                controls=metrics,
-                                spacing=8,
-                            ),
+                            ft.Row(controls=metrics, spacing=8),
                         ],
                         spacing=0,
                     ),
-                    bgcolor=SURFACE,
-                    border_radius=12,
-                    padding=12,
+                    bgcolor=SURFACE, border_radius=12, padding=12,
                 )
 
             if total_goals > 0:
                 planned_vs_executed_section.content = ft.Column(
                     controls=[
-                        ft.Text(
-                            "Detailed Breakdown",
-                            size=16,
-                            weight=ft.FontWeight.BOLD,
-                            color=TEXT_PRIMARY,
-                        ),
-                        ft.Text(
-                            "On-Time = custom deadline met | Same-Day = completed day created",
-                            size=11,
-                            color=TEXT_MUTED,
-                        ),
+                        ft.Text("Detailed Breakdown", size=16,
+                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                        ft.Text("On-Time = custom deadline met | Same-Day = completed day created",
+                                size=11, color=TEXT_MUTED),
                         ft.Container(height=8),
                         build_pve_row("Goals", goal_stats, TEAL),
                         ft.Container(height=6),
@@ -373,18 +297,14 @@ def build_analytics(page: ft.Page):
                             ft.Text("Detailed Breakdown", size=16,
                                     weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                             ft.Container(height=20),
-                            ft.Text("Add some goals to see analytics",
-                                    color=TEXT_MUTED),
+                            ft.Text("Add some goals to see analytics", color=TEXT_MUTED),
                         ],
                     ),
-                    bgcolor=CARD_BG,
-                    border_radius=12,
-                    padding=16,
+                    bgcolor=CARD_BG, border_radius=12, padding=16,
                 )
 
-            # ── Recent Activity Section ─────────────────────────────
-            recent_goals = sorted(
-                goals, key=lambda g: g.created_at, reverse=True)[:5]
+            # recent activity section
+            recent_goals = sorted(goals, key=lambda g: g.created_at, reverse=True)[:5]
 
             progress_items = []
             for g in recent_goals:
@@ -408,19 +328,14 @@ def build_analytics(page: ft.Page):
                                 ft.Row(
                                     controls=[
                                         ft.Text(
-                                            g.title[:20] +
-                                            "..." if len(
-                                                g.title) > 20 else g.title,
-                                            size=13,
-                                            color=TEXT_PRIMARY,
-                                            expand=True,
+                                            g.title[:20] + "..." if len(g.title) > 20 else g.title,
+                                            size=13, color=TEXT_PRIMARY, expand=True,
                                         ),
-                                        ft.Text(
-                                            f"{pct}%", size=12, color=color, weight=ft.FontWeight.W_500),
+                                        ft.Text(f"{pct}%", size=12, color=color,
+                                                weight=ft.FontWeight.W_500),
                                     ],
                                 ),
-                                ft.ProgressBar(value=pct / 100,
-                                               color=color, bgcolor=SURFACE),
+                                ft.ProgressBar(value=pct / 100, color=color, bgcolor=SURFACE),
                             ],
                             spacing=4,
                         ),
@@ -432,8 +347,7 @@ def build_analytics(page: ft.Page):
                 def legend_dot(color, label):
                     return ft.Row(
                         controls=[
-                            ft.Container(width=8, height=8,
-                                         bgcolor=color, border_radius=4),
+                            ft.Container(width=8, height=8, bgcolor=color, border_radius=4),
                             ft.Text(label, size=10, color=TEXT_SECONDARY),
                         ],
                         spacing=4,
@@ -441,12 +355,8 @@ def build_analytics(page: ft.Page):
 
                 progress_chart_section.content = ft.Column(
                     controls=[
-                        ft.Text(
-                            "Recent Goals Progress",
-                            size=14,
-                            weight=ft.FontWeight.W_600,
-                            color=TEXT_SECONDARY,
-                        ),
+                        ft.Text("Recent Goals Progress", size=14,
+                                weight=ft.FontWeight.W_600, color=TEXT_SECONDARY),
                         ft.Container(height=4),
                         *progress_items,
                         ft.Container(height=8),
@@ -477,11 +387,9 @@ def build_analytics(page: ft.Page):
             progress_chart_section.padding = 12
             progress_chart_section.border = ft.Border.all(1, SURFACE)
 
-            # ── Completion History Summary ──────────────────────────
+            # completion history summary
             completed_list = [g for g in goals if g.is_completed]
-            completed_list.sort(
-                key=lambda g: g.completed_at or g.created_at, reverse=True
-            )
+            completed_list.sort(key=lambda g: g.completed_at or g.created_at, reverse=True)
             recent_completed = completed_list[:5]
 
             history_items = []
@@ -489,15 +397,10 @@ def build_analytics(page: ft.Page):
                 badges = []
                 has_custom = getattr(g, 'has_custom_deadline', False)
                 if has_custom:
-                    on_time = was_completed_before_deadline(
-                        g.completed_at, g.deadline)
-                    if on_time:
-                        badges.append(_badge("On-Time", TEAL))
-                    else:
-                        badges.append(_badge("Late", RED))
+                    on_time = was_completed_before_deadline(g.completed_at, g.deadline)
+                    badges.append(_badge("On-Time", TEAL) if on_time else _badge("Late", RED))
                 else:
-                    same_day = was_same_day_execution(
-                        g.created_at, g.completed_at)
+                    same_day = was_same_day_execution(g.created_at, g.completed_at)
                     if same_day:
                         badges.append(_badge("Same-Day", PURPLE))
 
@@ -505,14 +408,10 @@ def build_analytics(page: ft.Page):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED,
-                                        color=TEAL, size=16),
+                                ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=TEAL, size=16),
                                 ft.Text(
-                                    g.title[:25] +
-                                    "..." if len(g.title) > 25 else g.title,
-                                    size=13,
-                                    color=TEXT_PRIMARY,
-                                    expand=True,
+                                    g.title[:25] + "..." if len(g.title) > 25 else g.title,
+                                    size=13, color=TEXT_PRIMARY, expand=True,
                                 ),
                                 *badges,
                             ],
@@ -526,12 +425,8 @@ def build_analytics(page: ft.Page):
             if history_items:
                 completion_history_section.content = ft.Column(
                     controls=[
-                        ft.Text(
-                            "Recent Completions",
-                            size=14,
-                            weight=ft.FontWeight.W_600,
-                            color=TEXT_SECONDARY,
-                        ),
+                        ft.Text("Recent Completions", size=14,
+                                weight=ft.FontWeight.W_600, color=TEXT_SECONDARY),
                         ft.Container(height=4),
                         *history_items,
                     ],
@@ -545,64 +440,33 @@ def build_analytics(page: ft.Page):
             page.update()
 
         except Exception as e:
-            planned_vs_executed_section.content = ft.Text(
-                f"Error: {str(e)}", color=RED)
+            planned_vs_executed_section.content = ft.Text(f"Error: {str(e)}", color=RED)
             page.update()
 
-    # Kick off async load
     page.run_task(do_load_analytics)
 
     return ft.Column(
         controls=[
-            # ── Header ──────────────────────────────────────────────
-            ft.Text("Analytics", size=28,
-                    weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-            ft.Text(
-                "Planned vs Executed • All Time",
-                size=13,
-                color=TEXT_SECONDARY,
-            ),
+            ft.Text("Analytics", size=28, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+            ft.Text("Planned vs Executed - All Time", size=13, color=TEXT_SECONDARY),
             ft.Container(height=8),
-
-            # ── Basic Stats Row ─────────────────────────────────────
             stats_row,
             ft.Container(height=12),
-
-            # ── Consolidated Metrics Section ────────────────────────
-            ft.Text(
-                "Overall Performance",
-                size=16,
-                weight=ft.FontWeight.BOLD,
-                color=TEXT_PRIMARY,
-            ),
+            ft.Text("Overall Performance", size=16, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
             ft.Container(height=4),
             metrics_cards_row,
             ft.Container(height=16),
-
-            # ── Interactive Chart Section ───────────────────────────
-            ft.Text(
-                "Analytics Charts",
-                size=16,
-                weight=ft.FontWeight.BOLD,
-                color=TEXT_PRIMARY,
-            ),
+            ft.Text("Analytics Charts", size=16, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
             ft.Container(height=8),
             ft.Row(
-                controls=[
-                    ft.Text("View:", size=12, color=TEXT_SECONDARY),
-                    chart_selector,
-                ],
+                controls=[ft.Text("View:", size=12, color=TEXT_SECONDARY), chart_selector],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             ft.Container(height=8),
             chart_container,
             ft.Container(height=16),
-
-            # ── Detailed Breakdown ──────────────────────────────────
             planned_vs_executed_section,
             ft.Container(height=12),
-
-            # ── Recent Activity ─────────────────────────────────────
             progress_chart_section,
             ft.Container(height=12),
             completion_history_section,
@@ -613,8 +477,8 @@ def build_analytics(page: ft.Page):
     )
 
 
-def _metric_box(label: str, value: str, color: str):
-    """Build a small metric box."""
+def _metric_box(label, value, color):
+    """small metric display box."""
     return ft.Container(
         content=ft.Column(
             controls=[
@@ -632,8 +496,8 @@ def _metric_box(label: str, value: str, color: str):
     )
 
 
-def _badge(text: str, color: str):
-    """Build a small badge."""
+def _badge(text, color):
+    """small status badge."""
     return ft.Container(
         content=ft.Text(text, size=9, color=color, weight=ft.FontWeight.W_500),
         bgcolor=f"{color}20",

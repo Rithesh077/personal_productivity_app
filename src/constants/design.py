@@ -1,23 +1,24 @@
-"""Design system tokens for Stride UI."""
+"""design system tokens for stride."""
 
-# Primary colors
+# primary
 TEAL = "#00D9A6"
 AMBER = "#FFB547"
 RED = "#FF5C5C"
 PURPLE = "#A78BFA"
 MUTED = "#3A4157"
 
-# Background colors
-NAVY = "#0B0F1A"
+# backgrounds
+BG = "#0B0F1A"
+NAVY = BG
 CARD_BG = "#141927"
 SURFACE = "#1E2436"
 
-# Text colors
+# text
 TEXT_PRIMARY = "#E0E0E0"
 TEXT_SECONDARY = "#8A92A6"
 TEXT_MUTED = "#5A6478"
 
-# Layout constants
+# layout
 CHART_MIN_HEIGHT = 300
 BAR_HEIGHT_SMALL = 24
 BAR_HEIGHT_LARGE = 32
@@ -25,7 +26,7 @@ LABEL_WIDTH = 100
 PERCENTAGE_WIDTH = 50
 COLOR_BOX_SIZE = 12
 
-# Text truncation limits
+# text truncation limits
 TITLE_TRUNCATE_CHART = 30
 TITLE_TRUNCATE_PROGRESS = 20
 TITLE_TRUNCATE_HISTORY = 25

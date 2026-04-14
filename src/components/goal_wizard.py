@@ -1,25 +1,21 @@
-"""Goal creation wizard for Stride - multi-step guided flow."""
+"""goal creation wizard - multi-step guided flow."""
 
 import flet as ft
 from datetime import datetime, time
 from typing import Callable, Optional
 from models.goal import Goal, Task, SubTask
-from utils.time_utils import utc_now, get_default_deadline, local_to_utc, format_local_datetime
-
-# Design tokens
-TEAL = "#00D9A6"
-CARD_BG = "#141927"
-SURFACE = "#1E2436"
-TEXT_PRIMARY = "#E0E0E0"
-TEXT_SECONDARY = "#8A92A6"
-TEXT_MUTED = "#5A6478"
-BG = "#0B0F1A"
+from constants.design import (
+    TEAL, BG, CARD_BG, SURFACE,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+)
+from utils.time_utils import utc_now, get_default_deadline, local_to_utc, extract_local_date, today_midnight
 
 
 class GoalWizard:
-    """Multi-step wizard for creating goals with tasks and sub-tasks."""
+    """two-step wizard: 1) goal title + deadline, 2) tasks with subtasks."""
 
-    def __init__(self, page: ft.Page, on_save: Callable[[Goal], None], on_cancel: Callable, initial_goal: Optional[Goal] = None):
+    def __init__(self, page: ft.Page, on_save: Callable[[Goal], None],
+                 on_cancel: Callable, initial_goal: Optional[Goal] = None):
         self.page = page
         self.on_save = on_save
         self.on_cancel = on_cancel
@@ -27,11 +23,11 @@ class GoalWizard:
         self.editing = initial_goal is not None
         self.original_goal_id = initial_goal.id if initial_goal else None
 
-        # Wizard state
-        self.step = 0  # 0=goal title, 1=tasks (with inline sub-tasks)
+        # wizard state
+        self.step = 0
         self.goal_title = initial_goal.title if initial_goal else ""
 
-        # Each entry preserves original model objects when editing
+        # task entries preserve original model objects when editing
         self.tasks: list[dict] = []
         if initial_goal:
             for task in initial_goal.tasks:
@@ -53,20 +49,18 @@ class GoalWizard:
             except Exception:
                 self.custom_deadline_dt = None
 
-        # UI elements
+        # ui elements
         self.content = ft.Container()
         self.deadline_display = ft.Text("", size=12, color=TEAL)
         self._build_step_0()
 
     def _build_step_0(self):
-        """Step 0: Enter goal title + deadline settings."""
+        """step 0: goal title + deadline settings."""
         self.title_input = ft.TextField(
             hint_text="What's your goal?",
             value=self.goal_title,
-            border_radius=12,
-            bgcolor=CARD_BG,
-            border_color=SURFACE,
-            focused_border_color=TEAL,
+            border_radius=12, bgcolor=CARD_BG,
+            border_color=SURFACE, focused_border_color=TEAL,
             cursor_color=TEAL,
             hint_style=ft.TextStyle(color=TEXT_MUTED),
             text_style=ft.TextStyle(color=TEXT_PRIMARY, size=18),
@@ -74,10 +68,8 @@ class GoalWizard:
             on_submit=lambda e: self._next_step(),
         )
 
-        # Update deadline display text
         self._update_deadline_display()
 
-        # Deadline section
         deadline_section = ft.Column(
             controls=[
                 ft.Row(
@@ -86,10 +78,8 @@ class GoalWizard:
                             label="Custom deadline",
                             value=self.use_custom_deadline,
                             active_color=TEAL,
-                            label_style=ft.TextStyle(
-                                color=TEXT_SECONDARY, size=13),
-                            on_change=lambda e: self._toggle_deadline(
-                                e.control.value),
+                            label_style=ft.TextStyle(color=TEXT_SECONDARY, size=13),
+                            on_change=lambda e: self._toggle_deadline(e.control.value),
                         ),
                         ft.Container(expand=True),
                         ft.TextButton(
@@ -109,10 +99,11 @@ class GoalWizard:
 
         self.content.content = ft.Column(
             controls=[
-                ft.Text("Create New Goal" if not self.editing else "Edit Goal", size=22,
-                        weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                ft.Text("Step 1 of 2: Define your goal",
-                        size=13, color=TEXT_SECONDARY),
+                ft.Text(
+                    "Create New Goal" if not self.editing else "Edit Goal",
+                    size=22, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY,
+                ),
+                ft.Text("Step 1 of 2: Define your goal", size=13, color=TEXT_SECONDARY),
                 ft.Container(height=16),
                 self.title_input,
                 ft.Container(height=8),
@@ -121,16 +112,14 @@ class GoalWizard:
                 ft.Row(
                     controls=[
                         ft.TextButton(
-                            "Cancel",
-                            on_click=lambda e: self.on_cancel(),
+                            "Cancel", on_click=lambda e: self.on_cancel(),
                             style=ft.ButtonStyle(color=TEXT_SECONDARY),
                         ),
                         ft.Container(expand=True),
                         ft.FilledButton(
                             "Next: Add Tasks",
                             icon=ft.Icons.ARROW_FORWARD_ROUNDED,
-                            bgcolor=TEAL,
-                            color=BG,
+                            bgcolor=TEAL, color=BG,
                             on_click=lambda e: self._next_step(),
                         ),
                     ],
@@ -141,7 +130,7 @@ class GoalWizard:
         self.page.update()
 
     def _update_deadline_display(self):
-        """Update the deadline display text."""
+        """update the deadline display text."""
         if self.use_custom_deadline and self.custom_deadline_dt:
             self.deadline_display.value = f"Due: {self.custom_deadline_dt.strftime('%b %d, %Y, %I:%M %p')}"
             self.deadline_display.color = TEAL
@@ -162,17 +151,15 @@ class GoalWizard:
         self._build_step_0()
 
     def _open_date_picker(self):
-        """Open DatePicker dialog."""
+        """open datepicker dialog."""
         initial_date = self.custom_deadline_dt or datetime.now()
 
         def on_date_change(e):
-            selected_date = date_picker.value
-            # Ask about specific time
-            self._show_time_option(selected_date)
+            self._show_time_option(date_picker.value)
 
         date_picker = ft.DatePicker(
             value=initial_date,
-            first_date=datetime.now(),
+            first_date=today_midnight(),
             last_date=datetime(year=2030, month=12, day=31),
             help_text="Set deadline date",
             confirm_text="Next",
@@ -181,13 +168,12 @@ class GoalWizard:
         self.page.show_dialog(date_picker)
 
     def _show_time_option(self, selected_date):
-        """After date selected, ask if user wants to set specific time."""
+        """after date selected, ask if user wants specific time."""
 
         def use_default_time(e=None):
             self.page.pop_dialog()
-            # Default: 11:59 PM on selected date
-            dt = selected_date if isinstance(selected_date, datetime) else datetime.combine(selected_date, time(23, 59, 59))
-            self.custom_deadline_dt = dt.replace(hour=23, minute=59, second=59)
+            target_date = extract_local_date(selected_date)
+            self.custom_deadline_dt = datetime.combine(target_date, time(23, 59, 59))
             self._update_deadline_display()
             self._build_step_0()
 
@@ -195,11 +181,9 @@ class GoalWizard:
             self.page.pop_dialog()
 
             def on_time_change(e):
-                dt = selected_date if isinstance(selected_date, datetime) else datetime.combine(selected_date, time(23, 59, 59))
-                self.custom_deadline_dt = dt.replace(
-                    hour=time_picker.value.hour,
-                    minute=time_picker.value.minute,
-                    second=0,
+                target_date = extract_local_date(selected_date)
+                self.custom_deadline_dt = datetime.combine(
+                    target_date, time(time_picker.value.hour, time_picker.value.minute, 0),
                 )
                 self._update_deadline_display()
                 self._build_step_0()
@@ -212,8 +196,7 @@ class GoalWizard:
             self.page.show_dialog(time_picker)
 
         dlg = ft.AlertDialog(
-            title=ft.Text("Set specific time?", size=16,
-                          weight=ft.FontWeight.BOLD),
+            title=ft.Text("Set specific time?", size=16, weight=ft.FontWeight.BOLD),
             content=ft.Text(
                 "Default deadline time is 11:59 PM.\nChoose a specific time or use the default.",
                 size=13, color=TEXT_SECONDARY,
@@ -227,8 +210,7 @@ class GoalWizard:
                 ft.FilledButton(
                     "Set Time",
                     icon=ft.Icons.ACCESS_TIME_ROUNDED,
-                    bgcolor=TEAL,
-                    color=BG,
+                    bgcolor=TEAL, color=BG,
                     on_click=open_time_picker,
                 ),
             ],
@@ -236,18 +218,15 @@ class GoalWizard:
         self.page.show_dialog(dlg)
 
     def _build_step_1(self):
-        """Step 1: Add tasks. Click on them to add sub-tasks."""
+        """step 1: add tasks, click to expand for subtasks."""
         self.task_input = ft.TextField(
             hint_text="Add a task...",
-            border_radius=12,
-            bgcolor=CARD_BG,
-            border_color=SURFACE,
-            focused_border_color=TEAL,
+            border_radius=12, bgcolor=CARD_BG,
+            border_color=SURFACE, focused_border_color=TEAL,
             cursor_color=TEAL,
             hint_style=ft.TextStyle(color=TEXT_MUTED),
             text_style=ft.TextStyle(color=TEXT_PRIMARY),
-            autofocus=True,
-            expand=True,
+            autofocus=True, expand=True,
             on_submit=lambda e: self._add_task(),
         )
 
@@ -256,20 +235,22 @@ class GoalWizard:
 
         self.content.content = ft.Column(
             controls=[
-                ft.Text("Create New Goal" if not self.editing else "Edit Goal", size=22,
-                        weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                ft.Text(f"Step 2 of 2: Add tasks for \"{self.goal_title}\"",
-                        size=13, color=TEXT_SECONDARY),
-                ft.Text("Click on a task to add sub-tasks",
-                        size=12, color=TEXT_MUTED, italic=True),
+                ft.Text(
+                    "Create New Goal" if not self.editing else "Edit Goal",
+                    size=22, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY,
+                ),
+                ft.Text(
+                    f'Step 2 of 2: Add tasks for "{self.goal_title}"',
+                    size=13, color=TEXT_SECONDARY,
+                ),
+                ft.Text("Click on a task to add sub-tasks", size=12, color=TEXT_MUTED, italic=True),
                 ft.Container(height=12),
                 ft.Row(
                     controls=[
                         self.task_input,
                         ft.IconButton(
                             icon=ft.Icons.ADD_CIRCLE_ROUNDED,
-                            icon_color=TEAL,
-                            icon_size=36,
+                            icon_color=TEAL, icon_size=36,
                             on_click=lambda e: self._add_task(),
                         ),
                     ],
@@ -281,8 +262,7 @@ class GoalWizard:
                 ft.Row(
                     controls=[
                         ft.TextButton(
-                            "Back",
-                            icon=ft.Icons.ARROW_BACK_ROUNDED,
+                            "Back", icon=ft.Icons.ARROW_BACK_ROUNDED,
                             on_click=lambda e: self._prev_step(),
                             style=ft.ButtonStyle(color=TEXT_SECONDARY),
                         ),
@@ -295,37 +275,31 @@ class GoalWizard:
                         ft.FilledButton(
                             "Update Goal" if self.editing else "Save Goal",
                             icon=ft.Icons.CHECK_ROUNDED,
-                            bgcolor=TEAL,
-                            color=BG,
+                            bgcolor=TEAL, color=BG,
                             on_click=lambda e: self._save_goal(),
                         ),
                     ],
                 ),
             ],
-            spacing=8,
-            expand=True,
+            spacing=8, expand=True,
         )
         self.page.update()
 
     def _refresh_tasks_list(self):
-        """Refresh the list of added tasks with expandable sub-task input."""
+        """refresh the displayed task list."""
         self.tasks_list.controls.clear()
         if not self.tasks:
             self.tasks_list.controls.append(
-                ft.Text("No tasks added yet", size=13,
-                        color=TEXT_MUTED, italic=True)
+                ft.Text("No tasks added yet", size=13, color=TEXT_MUTED, italic=True)
             )
         else:
             for i, task in enumerate(self.tasks):
-                self.tasks_list.controls.append(
-                    self._build_task_card(i, task)
-                )
+                self.tasks_list.controls.append(self._build_task_card(i, task))
 
     def _build_task_card(self, index: int, task: dict):
-        """Build a task card that can be expanded to add sub-tasks."""
+        """expandable task card for adding subtasks."""
         is_expanded = task.get("expanded", False)
 
-        # Sub-tasks list
         subtasks_column = ft.Column(spacing=4)
         for j, subtask_text in enumerate(task["subtasks"]):
             subtasks_column.controls.append(
@@ -333,14 +307,10 @@ class GoalWizard:
                     content=ft.Row(
                         controls=[
                             ft.Text(f"{j + 1}.", size=12, color=TEXT_MUTED),
-                            ft.Text(subtask_text, size=13,
-                                    color=TEXT_SECONDARY, expand=True),
+                            ft.Text(subtask_text, size=13, color=TEXT_SECONDARY, expand=True),
                             ft.IconButton(
-                                icon=ft.Icons.CLOSE_ROUNDED,
-                                icon_color=TEXT_MUTED,
-                                icon_size=14,
-                                on_click=lambda e, idx=index, sidx=j: self._remove_subtask(
-                                    idx, sidx),
+                                icon=ft.Icons.CLOSE_ROUNDED, icon_color=TEXT_MUTED, icon_size=14,
+                                on_click=lambda e, idx=index, sidx=j: self._remove_subtask(idx, sidx),
                             ),
                         ],
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -349,18 +319,14 @@ class GoalWizard:
                 )
             )
 
-        # Sub-task input field
         subtask_input_field = ft.TextField(
             hint_text="Add a sub-task...",
-            border_radius=8,
-            bgcolor=BG,
-            border_color=SURFACE,
-            focused_border_color=TEAL,
+            border_radius=8, bgcolor=BG,
+            border_color=SURFACE, focused_border_color=TEAL,
             cursor_color=TEAL,
             hint_style=ft.TextStyle(color=TEXT_MUTED, size=13),
             text_style=ft.TextStyle(color=TEXT_PRIMARY, size=13),
-            expand=True,
-            data=index,
+            expand=True, data=index,
             on_submit=lambda e: self._add_subtask_from_field(e.control),
         )
 
@@ -371,12 +337,9 @@ class GoalWizard:
                     controls=[
                         subtask_input_field,
                         ft.IconButton(
-                            icon=ft.Icons.ADD_ROUNDED,
-                            icon_color=TEAL,
-                            icon_size=24,
+                            icon=ft.Icons.ADD_ROUNDED, icon_color=TEAL, icon_size=24,
                             data=subtask_input_field,
-                            on_click=lambda e: self._add_subtask_from_field(
-                                e.control.data),
+                            on_click=lambda e: self._add_subtask_from_field(e.control.data),
                         ),
                     ],
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -392,31 +355,25 @@ class GoalWizard:
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.SUBDIRECTORY_ARROW_RIGHT_ROUNDED,
-                                        color=TEAL if is_expanded else TEXT_MUTED, size=18),
-                                ft.Text(task["title"], size=14,
-                                        color=TEXT_PRIMARY, expand=True),
-                                ft.Text(
-                                    f"{len(task['subtasks'])} sub-tasks", size=12, color=TEXT_MUTED),
+                                ft.Icon(
+                                    ft.Icons.SUBDIRECTORY_ARROW_RIGHT_ROUNDED,
+                                    color=TEAL if is_expanded else TEXT_MUTED, size=18,
+                                ),
+                                ft.Text(task["title"], size=14, color=TEXT_PRIMARY, expand=True),
+                                ft.Text(f"{len(task['subtasks'])} sub-tasks", size=12, color=TEXT_MUTED),
                                 ft.Icon(
                                     ft.Icons.EXPAND_LESS_ROUNDED if is_expanded else ft.Icons.EXPAND_MORE_ROUNDED,
-                                    color=TEXT_SECONDARY,
-                                    size=20,
+                                    color=TEXT_SECONDARY, size=20,
                                 ),
                                 ft.IconButton(
-                                    icon=ft.Icons.DELETE_ROUNDED,
-                                    icon_color=TEXT_MUTED,
-                                    icon_size=16,
-                                    on_click=lambda e, idx=index: self._remove_task(
-                                        idx),
+                                    icon=ft.Icons.DELETE_ROUNDED, icon_color=TEXT_MUTED, icon_size=16,
+                                    on_click=lambda e, idx=index: self._remove_task(idx),
                                 ),
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        on_click=lambda e, idx=index: self._toggle_task_expand(
-                            idx),
-                        padding=ft.Padding.symmetric(
-                            horizontal=12, vertical=8),
+                        on_click=lambda e, idx=index: self._toggle_task_expand(idx),
+                        padding=ft.Padding.symmetric(horizontal=12, vertical=8),
                     ),
                     expanded_content,
                 ],
@@ -429,10 +386,7 @@ class GoalWizard:
 
     def _toggle_task_expand(self, index: int):
         for i, task in enumerate(self.tasks):
-            if i == index:
-                task["expanded"] = not task.get("expanded", False)
-            else:
-                task["expanded"] = False
+            task["expanded"] = (i == index) and not task.get("expanded", False)
         self._refresh_tasks_list()
         self.page.update()
 
@@ -458,9 +412,10 @@ class GoalWizard:
     def _add_task(self):
         title = self.task_input.value.strip()
         if title:
-            self.tasks.append(
-                {"title": title, "subtasks": [], "expanded": False,
-                 "_task": None, "_subtask_models": []})
+            self.tasks.append({
+                "title": title, "subtasks": [], "expanded": False,
+                "_task": None, "_subtask_models": [],
+            })
             self.task_input.value = ""
             self._refresh_tasks_list()
             self.page.update()
@@ -485,10 +440,9 @@ class GoalWizard:
             self._build_step_0()
 
     def _save_goal(self):
-        """Create and save the goal, preserving existing model state when editing."""
+        """build the goal model, preserving existing state when editing."""
         now = utc_now()
 
-        # Compute deadline
         if self.use_custom_deadline and self.custom_deadline_dt:
             deadline = local_to_utc(self.custom_deadline_dt)
         else:
@@ -509,13 +463,9 @@ class GoalWizard:
                     original_subtask.position = subtask_position
                     sub_tasks.append(original_subtask)
                 else:
-                    sub_tasks.append(
-                        SubTask(
-                            title=subtask_title,
-                            created_at=now,
-                            position=subtask_position,
-                        )
-                    )
+                    sub_tasks.append(SubTask(
+                        title=subtask_title, created_at=now, position=subtask_position,
+                    ))
 
             if original_task is not None:
                 if task_data["title"] != original_task.title:
@@ -525,14 +475,10 @@ class GoalWizard:
                 original_task.sub_tasks = sub_tasks
                 tasks.append(original_task)
             else:
-                tasks.append(
-                    Task(
-                        title=task_data["title"],
-                        created_at=now,
-                        position=task_position,
-                        sub_tasks=sub_tasks,
-                    )
-                )
+                tasks.append(Task(
+                    title=task_data["title"], created_at=now,
+                    position=task_position, sub_tasks=sub_tasks,
+                ))
 
         goal_kwargs = {
             "title": self.goal_title,
@@ -548,15 +494,13 @@ class GoalWizard:
             goal_kwargs["is_completed"] = self.initial_goal.is_completed
             goal_kwargs["completed_at"] = self.initial_goal.completed_at
 
-        goal = Goal(**goal_kwargs)
-        self.on_save(goal)
+        self.on_save(Goal(**goal_kwargs))
 
     def build(self) -> ft.Container:
-        """Return the wizard container."""
+        """return the wizard container."""
         return ft.Container(
             content=self.content,
-            bgcolor=BG,
-            border_radius=16,
+            bgcolor=BG, border_radius=16,
             padding=ft.Padding.all(20),
             border=ft.Border.all(1, SURFACE),
             expand=True,

@@ -2,22 +2,23 @@
 
 **Plan. Execute. Improve.**
 
-A PWA that answers one question: _"Did I actually do what I planned today?"_
+A privacy-first PWA that answers one question: _"Did I actually do what I planned?"_
 
 ## What it does
 
-1. **Evening** — Plan tomorrow's tasks
-2. **Next day** — Work through the list, check off what you actually did
-3. **Review** — See your follow-through rate and 7-day trends
-4. **Repeat** — Plan better, informed by your own data
+1. **Plan** -- Set goals with tasks and sub-tasks
+2. **Execute** -- Work through the list, check off what you did
+3. **Review** -- See follow-through rate, on-time %, and same-day execution
+4. **Repeat** -- Plan better, informed by your own data
 
 No AI. No integrations. No account. Runs entirely in your browser using localStorage.
 
 ## Tech
 
-- **[Flet](https://flet.dev)** — Python → Web/Desktop/Mobile
-- **Client storage** — Zero backend, all data stays in your browser
-- **PWA** — Add to homescreen for quick access
+- **[Flet](https://flet.dev)** -- Python to Web/Desktop/Mobile
+- **Client storage** -- Zero backend, all data stays in your browser
+- **PWA** -- Add to homescreen, works offline
+- **Schema versioning** -- Data survives app updates
 
 ## Run locally
 
@@ -28,29 +29,22 @@ uv run flet run --web
 ## Build for deployment
 
 ```bash
-uv run flet build web -v
+uv run flet build web
 ```
 
-Deploy the `build/web` folder to GitHub Pages, Cloudflare Pages, or any static host.
+## Features
 
-## current features
-
-- create goals, tasks and subtasks
-- set deadlines for goals
-- mark goals, tasks and subtasks as complete
-- undo delete operations
-- edit goals, tasks and subtasks
-- delete goals, tasks and subtasks
-- reorder goals, tasks and subtasks
-- reorder subtasks within tasks
-- reorder tasks within goals
-- reorder goals within the list
-- percentage of completion
-
-## known issues
-
-- when setting a deadline the calender does not register the date change (e.g., selecting curr_date+1 with time as deadline reverts the date back to curr_date)
-
-## future features
-
-- analytics charts (e.g., charts showing user's completion rate, overdue goals, overplanning, etc.)
+- Create goals with tasks and sub-tasks
+- Set custom or default (24h) deadlines
+- Inline tap-to-edit titles (Notion-style)
+- Inline add fields for rapid task/sub-task entry
+- Mark complete with cascading completion logic
+- Undo delete operations
+- Reorder tasks and sub-tasks
+- Completion percentage tracking
+- Analytics dashboard:
+  - Completion by level (goal/task/subtask)
+  - Status distribution
+  - On-time and same-day execution analysis
+  - Recent goals progress
+  - Completion history with badges

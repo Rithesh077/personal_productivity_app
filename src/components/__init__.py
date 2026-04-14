@@ -1,5 +1,4 @@
-# Components package for Stride
-
+# components package
 from .goal_card import GoalCard
 from .goal_wizard import GoalWizard
 from .stat_card import StatCard

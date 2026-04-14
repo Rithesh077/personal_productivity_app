@@ -1,4 +1,4 @@
-"""Planner view for Stride — manage goals with tasks and sub-tasks."""
+"""planner view - manage goals with tasks and subtasks."""
 
 import flet as ft
 from datetime import datetime, time
@@ -7,24 +7,16 @@ from services.storage import load_goals, save_goal, delete_goal, get_goal
 from models.goal import Goal, Task, SubTask
 from components.goal_card import GoalCard
 from components.goal_wizard import GoalWizard
-from utils.time_utils import utc_now, local_to_utc
-
-# Design tokens
-TEAL = "#00D9A6"
-MUTED = "#3A4157"
-CARD_BG = "#141927"
-SURFACE = "#1E2436"
-TEXT_PRIMARY = "#E0E0E0"
-TEXT_SECONDARY = "#8A92A6"
-TEXT_MUTED = "#5A6478"
-BG = "#0B0F1A"
-RED = "#FF5C5C"
+from constants.design import (
+    TEAL, RED, MUTED, BG, CARD_BG, SURFACE,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+)
+from utils.time_utils import utc_now, local_to_utc, extract_local_date, today_midnight
 
 
 def build_planner(page: ft.Page):
-    """Build the planner view. Returns a Column control."""
+    """build the planner view, returns a column control."""
 
-    # State
     state = {
         "goals": [],
         "expanded_goal_id": None,
@@ -32,22 +24,20 @@ def build_planner(page: ft.Page):
         "undo_stack": [],
     }
 
-    # ── Goal list container ─────────────────────────────────────
     goals_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, expand=True)
     wizard_container = ft.Container(visible=False, expand=True)
     main_content = ft.Column(expand=True)
 
     def sort_goals(goals: list[Goal]) -> list[Goal]:
-        """Sort: incomplete first (newest on top), then completed (newest on top)."""
+        """incomplete first (newest on top), then completed (newest on top)."""
         incomplete = [g for g in goals if not g.is_completed]
         completed = [g for g in goals if g.is_completed]
         incomplete.sort(key=lambda g: g.created_at, reverse=True)
-        completed.sort(
-            key=lambda g: g.completed_at or g.created_at, reverse=True)
+        completed.sort(key=lambda g: g.completed_at or g.created_at, reverse=True)
         return incomplete + completed
 
     async def refresh_goals():
-        """Load and display goals."""
+        """load and display goals."""
         goals = await load_goals(page)
         state["goals"] = sort_goals(goals)
         goals_column.controls.clear()
@@ -57,16 +47,11 @@ def build_planner(page: ft.Page):
                 ft.Container(
                     content=ft.Column(
                         controls=[
-                            ft.Icon(ft.Icons.FLAG_ROUNDED,
-                                    color=MUTED, size=48),
-                            ft.Text(
-                                "No goals yet",
-                                size=16, color=TEXT_MUTED, text_align=ft.TextAlign.CENTER,
-                            ),
-                            ft.Text(
-                                "Tap + to create your first goal",
-                                size=13, color="#3A4157", text_align=ft.TextAlign.CENTER,
-                            ),
+                            ft.Icon(ft.Icons.FLAG_ROUNDED, color=MUTED, size=48),
+                            ft.Text("No goals yet", size=16, color=TEXT_MUTED,
+                                    text_align=ft.TextAlign.CENTER),
+                            ft.Text("Tap + to create your first goal", size=13,
+                                    color="#3A4157", text_align=ft.TextAlign.CENTER),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=8,
@@ -103,8 +88,9 @@ def build_planner(page: ft.Page):
         await update_stats()
         page.update()
 
-    # ── Toggle handlers ─────────────────────────────────────────
-    async def toggle_goal_async(goal_id: str, value: bool):
+    # toggle handlers
+
+    async def toggle_goal_async(goal_id, value):
         goal = await get_goal(page, goal_id)
         if goal:
             if value:
@@ -114,11 +100,11 @@ def build_planner(page: ft.Page):
             await save_goal(page, goal)
             await refresh_goals()
 
-    def toggle_goal(goal_id: str, value: bool):
+    def toggle_goal(goal_id, value):
         page.run_task(toggle_goal_async, goal_id, value)
 
-    async def toggle_task_async(goal_id: str, task_id: str, value: bool):
-        """Toggle a task. Cascades to all sub-tasks."""
+    async def toggle_task_async(goal_id, task_id, value):
+        """toggle task. cascades to all subtasks."""
         goal = await get_goal(page, goal_id)
         if goal:
             now = utc_now()
@@ -131,8 +117,7 @@ def build_planner(page: ft.Page):
                         subtask.completed_at = now if value else None
                     break
 
-            all_done = all(
-                t.is_completed for t in goal.tasks) if goal.tasks else False
+            all_done = all(t.is_completed for t in goal.tasks) if goal.tasks else False
             if all_done and goal.tasks:
                 goal.is_completed = True
                 goal.completed_at = now
@@ -143,11 +128,11 @@ def build_planner(page: ft.Page):
             await save_goal(page, goal)
             await refresh_goals()
 
-    def toggle_task(goal_id: str, task_id: str, value: bool):
+    def toggle_task(goal_id, task_id, value):
         page.run_task(toggle_task_async, goal_id, task_id, value)
 
-    async def toggle_subtask_async(goal_id: str, task_id: str, subtask_id: str, value: bool):
-        """Toggle a sub-task."""
+    async def toggle_subtask_async(goal_id, task_id, subtask_id, value):
+        """toggle subtask. auto-completes parent task/goal if all done."""
         goal = await get_goal(page, goal_id)
         if goal:
             now = utc_now()
@@ -169,8 +154,7 @@ def build_planner(page: ft.Page):
                         task.completed_at = None
                     break
 
-            all_done = all(
-                t.is_completed for t in goal.tasks) if goal.tasks else False
+            all_done = all(t.is_completed for t in goal.tasks) if goal.tasks else False
             if all_done and goal.tasks:
                 goal.is_completed = True
                 goal.completed_at = now
@@ -181,20 +165,20 @@ def build_planner(page: ft.Page):
             await save_goal(page, goal)
             await refresh_goals()
 
-    def toggle_subtask(goal_id: str, task_id: str, subtask_id: str, value: bool):
-        page.run_task(toggle_subtask_async, goal_id,
-                      task_id, subtask_id, value)
+    def toggle_subtask(goal_id, task_id, subtask_id, value):
+        page.run_task(toggle_subtask_async, goal_id, task_id, subtask_id, value)
 
-    # ── Action handlers ─────────────────────────────────────────
-    def handle_expand(goal_id: str):
+    # action handlers
+
+    def handle_expand(goal_id):
         if state["expanded_goal_id"] == goal_id:
             state["expanded_goal_id"] = None
         else:
             state["expanded_goal_id"] = goal_id
         page.run_task(refresh_goals)
 
-    def handle_delete_goal(goal_id: str):
-        """Show confirmation dialog before deleting goal."""
+    def handle_delete_goal(goal_id):
+        """show confirmation dialog before deleting goal."""
         async def show_confirmation():
             goal = await get_goal(page, goal_id)
             if not goal:
@@ -211,39 +195,32 @@ def build_planner(page: ft.Page):
                 page.run_task(delete_goal_with_undo, goal_id, goal)
 
             dlg = ft.AlertDialog(
-                title=ft.Text("Delete Goal?", size=18,
-                              weight=ft.FontWeight.BOLD),
+                title=ft.Text("Delete Goal?", size=18, weight=ft.FontWeight.BOLD),
                 content=ft.Column(
                     controls=[
-                        ft.Text(f"Goal: {goal.title}",
-                                size=14, color=TEXT_PRIMARY),
+                        ft.Text(f"Goal: {goal.title}", size=14, color=TEXT_PRIMARY),
                         ft.Container(height=8),
                         ft.Text(
-                            f"This will delete {total_tasks} task{'s' if total_tasks != 1 else ''} and {total_subtasks} subtask{'s' if total_subtasks != 1 else ''}.",
-                            size=12,
-                            color=TEXT_SECONDARY,
+                            f"This will delete {total_tasks} task{'s' if total_tasks != 1 else ''} "
+                            f"and {total_subtasks} subtask{'s' if total_subtasks != 1 else ''}.",
+                            size=12, color=TEXT_SECONDARY,
                         ),
                     ],
-                    spacing=4,
-                    tight=True,
+                    spacing=4, tight=True,
                 ),
                 actions=[
                     ft.TextButton("Cancel", on_click=close_dialog),
                     ft.FilledButton(
-                        "Delete",
-                        bgcolor=RED,
-                        color="white",
-                        on_click=confirm_delete,
+                        "Delete", bgcolor=RED, color="white", on_click=confirm_delete,
                     ),
                 ],
             )
-
             page.show_dialog(dlg)
 
         page.run_task(show_confirmation)
 
-    async def delete_goal_with_undo(goal_id: str, goal_backup: Goal):
-        """Delete goal and show undo snackbar."""
+    async def delete_goal_with_undo(goal_id, goal_backup):
+        """delete goal and show undo snackbar."""
         await delete_goal(page, goal_id)
 
         undo_entry = {"goal_id": goal_id, "goal": goal_backup}
@@ -252,13 +229,9 @@ def build_planner(page: ft.Page):
         undo_bar = ft.SnackBar(
             content=ft.Row(
                 controls=[
-                    ft.Text(f"Deleted '{goal_backup.title}'",
-                            color=TEXT_PRIMARY),
+                    ft.Text(f"Deleted '{goal_backup.title}'", color=TEXT_PRIMARY),
                     ft.Container(expand=True),
-                    ft.TextButton(
-                        "Undo",
-                        on_click=lambda e: _undo_delete(undo_entry),
-                    ),
+                    ft.TextButton("Undo", on_click=lambda e: _undo_delete(undo_entry)),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -268,7 +241,7 @@ def build_planner(page: ft.Page):
         await refresh_goals()
 
     def _undo_delete(undo_entry):
-        """Restore deleted goal."""
+        """restore deleted goal."""
         async def restore():
             goal = undo_entry["goal"]
             await save_goal(page, goal)
@@ -276,80 +249,59 @@ def build_planner(page: ft.Page):
                 state["undo_stack"].remove(undo_entry)
             page.pop_dialog()
             await refresh_goals()
-
         page.run_task(restore)
 
-    # ── Inline add handlers (Notion-style, no dialog) ───────────
-    def handle_add_task_inline(goal_id: str, title: str):
-        """Add a task directly from the inline field."""
+    # inline add handlers
+
+    def handle_add_task_inline(goal_id, title):
+        """add a task from the inline field."""
         async def add_task_async():
             goal = await get_goal(page, goal_id)
             if not goal:
                 return
-
-            goal.tasks.append(
-                Task(
-                    title=title,
-                    created_at=utc_now(),
-                    position=len(goal.tasks),
-                ),
-            )
-
-            # Adding an incomplete task means goal can't be complete
+            goal.tasks.append(Task(
+                title=title, created_at=utc_now(), position=len(goal.tasks),
+            ))
+            # new incomplete task means goal can't be complete
             goal.is_completed = False
             goal.completed_at = None
-
             await save_goal(page, goal)
             await refresh_goals()
-
         page.run_task(add_task_async)
 
-    def handle_add_subtask_inline(goal_id: str, task_id: str, title: str):
-        """Add a subtask directly from the inline field."""
+    def handle_add_subtask_inline(goal_id, task_id, title):
+        """add a subtask from the inline field."""
         async def add_subtask_async():
             goal = await get_goal(page, goal_id)
             if not goal:
                 return
-
             for task in goal.tasks:
                 if task.id == task_id:
-                    task.sub_tasks.append(
-                        SubTask(
-                            title=title,
-                            created_at=utc_now(),
-                            position=len(task.sub_tasks),
-                        ),
-                    )
-
-                    # Adding an incomplete subtask means task can't be complete
+                    task.sub_tasks.append(SubTask(
+                        title=title, created_at=utc_now(), position=len(task.sub_tasks),
+                    ))
                     task.is_completed = False
                     task.completed_at = None
                     break
-
-            # Goal can't be complete if a task isn't
             goal.is_completed = False
             goal.completed_at = None
-
             await save_goal(page, goal)
             await refresh_goals()
-
         page.run_task(add_subtask_async)
 
-    # ── Deadline picker flow ────────────────────────────────────
-    def handle_change_deadline(goal_id: str):
-        """Open DatePicker → optional TimePicker → save deadline."""
+    # deadline picker flow
 
-        # State for the picker flow
+    def handle_change_deadline(goal_id):
+        """datepicker -> optional timepicker -> save deadline."""
         picker_state = {"selected_date": None}
 
         def on_date_selected(e):
             picker_state["selected_date"] = date_picker.value
-            # Show time option dialog
             page.run_task(show_time_option)
 
         date_picker = ft.DatePicker(
             value=datetime.now(),
-            first_date=datetime.now(),
+            first_date=today_midnight(),
             last_date=datetime(year=2030, month=12, day=31),
             help_text="Set deadline date",
             confirm_text="Next",
@@ -357,15 +309,12 @@ def build_planner(page: ft.Page):
         )
 
         async def show_time_option():
-            """Ask user if they want to set a specific time."""
+            """ask user if they want to set a specific time."""
             def use_default_time(e=None):
                 page.pop_dialog()
-                # Default: 11:59 PM on selected date
                 selected = picker_state["selected_date"]
-                deadline_dt = datetime.combine(
-                    selected.date() if hasattr(selected, 'date') else selected,
-                    time(23, 59, 59),
-                )
+                target_date = extract_local_date(selected)
+                deadline_dt = datetime.combine(target_date, time(23, 59, 59))
                 page.run_task(save_deadline, goal_id, deadline_dt)
 
             def open_time_picker(e=None):
@@ -373,10 +322,8 @@ def build_planner(page: ft.Page):
 
                 def on_time_selected(e):
                     selected = picker_state["selected_date"]
-                    deadline_dt = datetime.combine(
-                        selected.date() if hasattr(selected, 'date') else selected,
-                        time_picker.value,
-                    )
+                    target_date = extract_local_date(selected)
+                    deadline_dt = datetime.combine(target_date, time_picker.value)
                     page.run_task(save_deadline, goal_id, deadline_dt)
 
                 time_picker = ft.TimePicker(
@@ -387,8 +334,7 @@ def build_planner(page: ft.Page):
                 page.show_dialog(time_picker)
 
             dlg = ft.AlertDialog(
-                title=ft.Text("Set specific time?", size=16,
-                              weight=ft.FontWeight.BOLD),
+                title=ft.Text("Set specific time?", size=16, weight=ft.FontWeight.BOLD),
                 content=ft.Text(
                     "Default deadline time is 11:59 PM",
                     size=13, color=TEXT_SECONDARY,
@@ -400,17 +346,15 @@ def build_planner(page: ft.Page):
                         style=ft.ButtonStyle(color=TEXT_SECONDARY),
                     ),
                     ft.FilledButton(
-                        "Set Time",
-                        bgcolor=TEAL,
-                        color=BG,
+                        "Set Time", bgcolor=TEAL, color=BG,
                         on_click=open_time_picker,
                     ),
                 ],
             )
             page.show_dialog(dlg)
 
-        async def save_deadline(gid: str, deadline_dt: datetime):
-            """Save the combined deadline to the goal."""
+        async def save_deadline(gid, deadline_dt):
+            """save the combined deadline to the goal."""
             goal = await get_goal(page, gid)
             if goal:
                 goal.deadline = local_to_utc(deadline_dt)
@@ -420,8 +364,9 @@ def build_planner(page: ft.Page):
 
         page.show_dialog(date_picker)
 
-    # ── Edit handlers ───────────────────────────────────────────
-    def handle_edit_task(goal_id: str, task_id: str, new_title: str):
+    # edit handlers
+
+    def handle_edit_task(goal_id, task_id, new_title):
         async def edit_task_async():
             goal = await get_goal(page, goal_id)
             if goal:
@@ -434,7 +379,7 @@ def build_planner(page: ft.Page):
                 await refresh_goals()
         page.run_task(edit_task_async)
 
-    def handle_edit_subtask(goal_id: str, task_id: str, subtask_id: str, new_title: str):
+    def handle_edit_subtask(goal_id, task_id, subtask_id, new_title):
         async def edit_subtask_async():
             goal = await get_goal(page, goal_id)
             if goal:
@@ -450,7 +395,7 @@ def build_planner(page: ft.Page):
                 await refresh_goals()
         page.run_task(edit_subtask_async)
 
-    def handle_delete_task(goal_id: str, task_id: str):
+    def handle_delete_task(goal_id, task_id):
         async def delete_task_async():
             goal = await get_goal(page, goal_id)
             if goal:
@@ -466,14 +411,13 @@ def build_planner(page: ft.Page):
                 await refresh_goals()
         page.run_task(delete_task_async)
 
-    def handle_delete_subtask(goal_id: str, task_id: str, subtask_id: str):
+    def handle_delete_subtask(goal_id, task_id, subtask_id):
         async def delete_subtask_async():
             goal = await get_goal(page, goal_id)
             if goal:
                 for task in goal.tasks:
                     if task.id == task_id:
-                        task.sub_tasks = [
-                            s for s in task.sub_tasks if s.id != subtask_id]
+                        task.sub_tasks = [s for s in task.sub_tasks if s.id != subtask_id]
                         for idx, subtask in enumerate(task.sub_tasks):
                             subtask.position = idx
                         if task.sub_tasks:
@@ -491,7 +435,7 @@ def build_planner(page: ft.Page):
                 await refresh_goals()
         page.run_task(delete_subtask_async)
 
-    def handle_move_task(goal_id: str, task_id: str, direction: int):
+    def handle_move_task(goal_id, task_id, direction):
         async def move_task_async():
             goal = await get_goal(page, goal_id)
             if goal:
@@ -510,7 +454,7 @@ def build_planner(page: ft.Page):
                         await refresh_goals()
         page.run_task(move_task_async)
 
-    def handle_move_subtask(goal_id: str, task_id: str, subtask_id: str, direction: int):
+    def handle_move_subtask(goal_id, task_id, subtask_id, direction):
         async def move_subtask_async():
             goal = await get_goal(page, goal_id)
             if goal:
@@ -532,7 +476,7 @@ def build_planner(page: ft.Page):
                         break
         page.run_task(move_subtask_async)
 
-    def handle_edit_goal(goal_id: str, new_title: str):
+    def handle_edit_goal(goal_id, new_title):
         async def edit_goal_async():
             goal = await get_goal(page, goal_id)
             if goal:
@@ -542,7 +486,8 @@ def build_planner(page: ft.Page):
                 await refresh_goals()
         page.run_task(edit_goal_async)
 
-    # ── Wizard handlers ─────────────────────────────────────────
+    # wizard handlers
+
     def show_wizard():
         state["show_wizard"] = True
         wizard = GoalWizard(page, on_save=save_new_goal, on_cancel=hide_wizard)
@@ -558,31 +503,28 @@ def build_planner(page: ft.Page):
         main_content.visible = True
         page.update()
 
-    async def save_new_goal_async(goal: Goal):
+    async def save_new_goal_async(goal):
         await save_goal(page, goal)
         hide_wizard()
         await refresh_goals()
 
-    def save_new_goal(goal: Goal):
+    def save_new_goal(goal):
         page.run_task(save_new_goal_async, goal)
 
-    # ── Header ──────────────────────────────────────────────────
+    # header
     header = ft.Row(
         controls=[
             ft.Column(
                 controls=[
-                    ft.Text("Stride", size=28,
-                            weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                    ft.Text("Plan. Execute. Improve.",
-                            size=13, color=TEXT_SECONDARY),
+                    ft.Text("Stride", size=28, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                    ft.Text("Plan. Execute. Improve.", size=13, color=TEXT_SECONDARY),
                 ],
                 spacing=2,
             ),
             ft.Container(expand=True),
             ft.FloatingActionButton(
                 icon=ft.Icons.ADD_ROUNDED,
-                bgcolor=TEAL,
-                foreground_color=BG,
+                bgcolor=TEAL, foreground_color=BG,
                 mini=True,
                 on_click=lambda e: show_wizard(),
             ),
@@ -590,7 +532,7 @@ def build_planner(page: ft.Page):
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
     )
 
-    # ── Stats bar ───────────────────────────────────────────────
+    # stats bar
     stats_container = ft.Container()
 
     async def update_stats():
@@ -602,10 +544,8 @@ def build_planner(page: ft.Page):
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Icon(ft.Icons.FLAG_ROUNDED,
-                                    color=TEAL, size=16),
-                            ft.Text(f"{active} active", size=13,
-                                    color=TEXT_SECONDARY),
+                            ft.Icon(ft.Icons.FLAG_ROUNDED, color=TEAL, size=16),
+                            ft.Text(f"{active} active", size=13, color=TEXT_SECONDARY),
                         ],
                         spacing=4,
                     ),
@@ -613,10 +553,8 @@ def build_planner(page: ft.Page):
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED,
-                                    color=TEXT_MUTED, size=16),
-                            ft.Text(f"{completed} done",
-                                    size=13, color=TEXT_MUTED),
+                            ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=TEXT_MUTED, size=16),
+                            ft.Text(f"{completed} done", size=13, color=TEXT_MUTED),
                         ],
                         spacing=4,
                     ),
@@ -625,24 +563,19 @@ def build_planner(page: ft.Page):
             spacing=16,
         )
 
-    # ── Main content ────────────────────────────────────────────
+    # main content layout
     main_content.controls = [
         header,
-        ft.Container(content=stats_container,
-                     padding=ft.Padding.symmetric(vertical=8)),
-        ft.Text("Goals", size=14, weight=ft.FontWeight.W_600,
-                color=TEXT_SECONDARY),
+        ft.Container(content=stats_container, padding=ft.Padding.symmetric(vertical=8)),
+        ft.Text("Goals", size=14, weight=ft.FontWeight.W_600, color=TEXT_SECONDARY),
         goals_column,
     ]
     main_content.spacing = 12
 
-    # ── Initial load ────────────────────────────────────────────
+    # initial load
     page.run_task(refresh_goals)
 
     return ft.Stack(
-        controls=[
-            main_content,
-            wizard_container,
-        ],
+        controls=[main_content, wizard_container],
         expand=True,
     )
