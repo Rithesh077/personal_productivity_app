@@ -1,14 +1,6 @@
-"""Math utility functions for Stride."""
+"""math utility functions."""
 
 
 def safe_percentage(numerator: int, denominator: int) -> int:
-    """Calculate percentage safely, returning 0 if denominator is 0.
-
-    Args:
-        numerator: Numerator value
-        denominator: Denominator value
-
-    Returns:
-        Percentage as integer (0-100), or 0 if denominator is 0
-    """
+    """percentage safe from division by zero, returns 0-100."""
     return int((numerator / denominator) * 100) if denominator > 0 else 0

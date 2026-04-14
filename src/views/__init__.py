@@ -1,1 +1,1 @@
-# Views package for Stride
+# views package

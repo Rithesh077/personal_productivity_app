@@ -1,10 +1,4 @@
-"""Goal, Task, and SubTask data models for Stride.
-
-Hierarchy:
-- Goal: The main objective
-  - Task: Major component of the goal
-    - SubTask: Detailed action item
-"""
+"""data models: goal > task > subtask hierarchy."""
 
 from dataclasses import dataclass, field, asdict
 from typing import Optional
@@ -13,14 +7,14 @@ import uuid
 
 @dataclass
 class SubTask:
-    """A sub-task within a task (the lowest level)."""
+    """lowest level item within a task."""
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str = ""
-    created_at: str = ""  # UTC ISO timestamp
-    updated_at: Optional[str] = None  # UTC ISO timestamp (for edits)
-    completed_at: Optional[str] = None  # UTC ISO timestamp
+    created_at: str = ""
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
     is_completed: bool = False
-    position: int = 0  # Order within parent task
+    position: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -40,14 +34,14 @@ class SubTask:
 
 @dataclass
 class Task:
-    """A task within a goal, containing sub-tasks."""
+    """mid-level item within a goal, contains subtasks."""
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str = ""
-    created_at: str = ""  # UTC ISO timestamp
-    updated_at: Optional[str] = None  # UTC ISO timestamp (for edits)
-    completed_at: Optional[str] = None  # UTC ISO timestamp
+    created_at: str = ""
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
     is_completed: bool = False
-    position: int = 0  # Order within parent goal
+    position: int = 0
     sub_tasks: list[SubTask] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -64,7 +58,7 @@ class Task:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Task":
-        # Handle both old 'steps' key and new 'sub_tasks' key for backwards compatibility
+        # backwards compat: old key was 'steps'
         sub_tasks_data = data.get("sub_tasks", data.get("steps", []))
         return cls(
             id=data.get("id") or str(uuid.uuid4()),
@@ -78,7 +72,6 @@ class Task:
         )
 
     def completion_percentage(self) -> int:
-        """Calculate completion percentage based on sub-tasks."""
         if not self.sub_tasks:
             return 100 if self.is_completed else 0
         completed = sum(1 for s in self.sub_tasks if s.is_completed)
@@ -87,14 +80,14 @@ class Task:
 
 @dataclass
 class Goal:
-    """A main goal containing tasks."""
+    """top-level objective containing tasks."""
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str = ""
-    created_at: str = ""  # UTC ISO timestamp
-    updated_at: Optional[str] = None  # UTC ISO timestamp (for edits)
-    completed_at: Optional[str] = None  # UTC ISO timestamp
-    deadline: Optional[str] = None  # UTC ISO timestamp
-    has_custom_deadline: bool = False  # True if user set a custom deadline
+    created_at: str = ""
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    deadline: Optional[str] = None
+    has_custom_deadline: bool = False
     is_completed: bool = False
     tasks: list[Task] = field(default_factory=list)
 
@@ -113,7 +106,7 @@ class Goal:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Goal":
-        # Handle both old 'sub_tasks' key and new 'tasks' key for backwards compatibility
+        # backwards compat: old key was 'sub_tasks'
         tasks_data = data.get("tasks", data.get("sub_tasks", []))
         return cls(
             id=data.get("id") or str(uuid.uuid4()),
@@ -128,7 +121,6 @@ class Goal:
         )
 
     def completion_percentage(self) -> int:
-        """Calculate completion percentage based on tasks and their sub-tasks."""
         if not self.tasks:
             return 100 if self.is_completed else 0
 
@@ -147,7 +139,7 @@ class Goal:
         return int((completed_items / total_items) * 100) if total_items > 0 else 0
 
     def mark_complete(self, completed_at: str):
-        """Mark goal and all children as complete."""
+        """mark goal and all children as complete."""
         self.is_completed = True
         self.completed_at = completed_at
         for t in self.tasks:
@@ -158,6 +150,6 @@ class Goal:
                 st.completed_at = completed_at
 
     def mark_incomplete(self):
-        """Mark goal as incomplete (preserves child task/subtask progress)."""
+        """mark goal as incomplete, preserves child progress."""
         self.is_completed = False
         self.completed_at = None

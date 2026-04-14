@@ -1,12 +1,11 @@
-"""Stat card component for Stride."""
+"""stat card component."""
 
 import flet as ft
-
-CARD_BG = "#141927"
+from constants.design import CARD_BG, TEXT_SECONDARY, SURFACE
 
 
 def StatCard(label: str, value: str, icon, color: str):
-    """Create a metric card with icon, value, and label."""
+    """metric card with icon, value, and label."""
     return ft.Container(
         content=ft.Column(
             controls=[
@@ -20,7 +19,7 @@ def StatCard(label: str, value: str, icon, color: str):
                 ft.Text(
                     label,
                     size=11,
-                    color="#8A92A6",
+                    color=TEXT_SECONDARY,
                     weight=ft.FontWeight.W_500,
                 ),
             ],
@@ -31,5 +30,5 @@ def StatCard(label: str, value: str, icon, color: str):
         border_radius=16,
         padding=ft.Padding.symmetric(horizontal=12, vertical=16),
         expand=True,
-        border=ft.Border.all(1, "#1E2436"),
+        border=ft.Border.all(1, SURFACE),
     )

@@ -1,4 +1,4 @@
-"""Utility modules for Stride."""
+"""utility modules."""
 
 from .time_utils import (
     utc_now,
@@ -9,6 +9,8 @@ from .time_utils import (
     format_local_date,
     get_default_deadline,
     is_past_deadline,
+    extract_local_date,
+    today_midnight,
 )
 
 __all__ = [
@@ -20,4 +22,6 @@ __all__ = [
     "format_local_date",
     "get_default_deadline",
     "is_past_deadline",
+    "extract_local_date",
+    "today_midnight",
 ]

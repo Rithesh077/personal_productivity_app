@@ -1,31 +1,52 @@
-"""Stride — Plan. Execute. Improve."""
+"""stride - plan. execute. improve."""
 
 import flet as ft
 
 from views.planner import build_planner
-from views.analytics import build_analytics
+from constants.design import BG, TEAL, SURFACE, TEXT_PRIMARY, TEXT_MUTED, CARD_BG
 
-# Design tokens
-NAVY = "#0B0F1A"
-TEAL = "#00D9A6"
-SURFACE = "#141927"
+
+def _build_coming_soon():
+    """placeholder for analytics tab."""
+    return ft.Column(
+        controls=[
+            ft.Container(expand=True),
+            ft.Column(
+                controls=[
+                    ft.Icon(ft.Icons.INSIGHTS_ROUNDED, color=TEXT_MUTED, size=64),
+                    ft.Container(height=16),
+                    ft.Text("Analytics", size=24, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY, text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=8),
+                    ft.Text("Coming soon", size=16, color=TEXT_MUTED,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text("Track your follow-through rate, on-time %, and more.",
+                            size=13, color=TEXT_MUTED, text_align=ft.TextAlign.CENTER),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=0,
+            ),
+            ft.Container(expand=True),
+        ],
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True,
+    )
 
 
 def main(page: ft.Page):
     page.title = "Stride"
-    page.bgcolor = NAVY
+    page.bgcolor = BG
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 0
     page.theme = ft.Theme(
         color_scheme=ft.ColorScheme(
             primary=TEAL,
-            on_primary=NAVY,
-            surface=NAVY,
+            on_primary=BG,
+            surface=BG,
             on_surface="#E0E0E0",
         ),
     )
 
-    # Build the planner (persists across navigation)
     planner = build_planner(page)
 
     content = ft.Container(
@@ -39,8 +60,7 @@ def main(page: ft.Page):
         if idx == 0:
             content.content = planner
         else:
-            # Rebuild analytics each time for fresh data
-            content.content = build_analytics(page)
+            content.content = _build_coming_soon()
         page.update()
 
     page.navigation_bar = ft.NavigationBar(
