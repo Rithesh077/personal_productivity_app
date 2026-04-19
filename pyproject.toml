@@ -20,7 +20,7 @@ dev = [
 
 [tool.flet]
 org = "dev.stride"
-product = "stride"
+product = "Stride"
 company = "Stride"
 copyright = "Copyright (C) 2026 Stride"
 
