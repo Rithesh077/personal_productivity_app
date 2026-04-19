@@ -15,6 +15,9 @@ from utils.time_utils import (
     format_local_datetime,
 )
 
+# tree line color
+TREE_LINE = "#2A3450"
+
 
 def GoalCard(
     goal: Goal,
@@ -103,6 +106,7 @@ def GoalCard(
             controls=[
                 ft.Checkbox(
                     value=is_done, active_color=TEAL, check_color=BG,
+                    scale=1.15,
                     on_change=lambda e: on_toggle_goal(goal.id, e.control.value),
                 ),
                 ft.Column(
@@ -128,13 +132,13 @@ def GoalCard(
         padding=ft.Padding.only(left=48, right=8, bottom=8),
     )
 
-    # expanded content
+    # expanded content with tree structure
     sorted_tasks = sorted(goal.tasks, key=lambda t: t.position)
-    expanded_content = []
+    tree_children = []
 
     if expanded:
         for idx, task in enumerate(sorted_tasks):
-            expanded_content.append(
+            tree_children.append(
                 _build_task(
                     goal.id, task, idx, len(sorted_tasks),
                     on_toggle_task, on_toggle_subtask,
@@ -145,16 +149,24 @@ def GoalCard(
                 )
             )
 
-        # inline "add task..." field
-        expanded_content.append(
+        # inline "add task..." field inside tree
+        tree_children.append(
             _build_inline_add_field(
                 placeholder="Add task...",
                 on_submit=lambda title: on_add_task_inline(goal.id, title),
-                indent_left=48, page=page,
+                indent_left=8, page=page,
             )
         )
 
-    # actions (delete only, add is inline now)
+    # wrap tree children in a container with left tree line
+    tree_container = ft.Container(
+        content=ft.Column(controls=tree_children, spacing=0),
+        padding=ft.Padding.only(left=36, right=4, top=0, bottom=0),
+        border=ft.Border(left=ft.BorderSide(2, TREE_LINE)) if tree_children else None,
+        margin=ft.Margin.only(left=12),
+    ) if tree_children else ft.Container()
+
+    # actions (delete goal)
     actions = (
         ft.Row(
             controls=[
@@ -174,7 +186,7 @@ def GoalCard(
 
     return ft.Container(
         content=ft.Column(
-            controls=[header, progress_bar, *expanded_content, actions],
+            controls=[header, progress_bar, tree_container, actions],
             spacing=0,
         ),
         bgcolor=CARD_BG,
@@ -204,40 +216,37 @@ def _build_task(
         page=page, expand=True, strike_through=is_done,
     )
 
-    up_button = ft.IconButton(
-        icon=ft.Icons.ARROW_UPWARD_ROUNDED, icon_size=18,
-        icon_color=TEXT_MUTED if task_idx == 0 else TEXT_SECONDARY,
+    # action buttons with circular backgrounds
+    up_btn = _action_circle(
+        ft.Icons.ARROW_UPWARD_ROUNDED, TEXT_SECONDARY, SURFACE, 14,
         on_click=lambda e: on_move_task(goal_id, task.id, -1),
-        opacity=0.3 if task_idx == 0 else 1.0,
         disabled=task_idx == 0,
     )
-
-    down_button = ft.IconButton(
-        icon=ft.Icons.ARROW_DOWNWARD_ROUNDED, icon_size=18,
-        icon_color=TEXT_MUTED if task_idx == total_tasks - 1 else TEXT_SECONDARY,
+    down_btn = _action_circle(
+        ft.Icons.ARROW_DOWNWARD_ROUNDED, TEXT_SECONDARY, SURFACE, 14,
         on_click=lambda e: on_move_task(goal_id, task.id, 1),
-        opacity=0.3 if task_idx == total_tasks - 1 else 1.0,
         disabled=task_idx == total_tasks - 1,
     )
-
-    delete_icon = ft.IconButton(
-        icon=ft.Icons.DELETE_OUTLINE_ROUNDED, icon_size=18,
-        icon_color=RED,
+    del_btn = _action_circle(
+        ft.Icons.DELETE_OUTLINE_ROUNDED, RED, f"{RED}18", 14,
         on_click=lambda e: on_delete_task(goal_id, task.id),
-        opacity=0.3,
     )
 
     actions_container = ft.Container(
-        content=ft.Row(controls=[up_button, down_button, delete_icon], spacing=4),
-        opacity=0.3,
+        content=ft.Row(
+            controls=[up_btn, down_btn, ft.Container(width=6), del_btn],
+            spacing=6,
+        ),
+        opacity=0.4,
         on_hover=lambda e: _on_hover(e, actions_container),
     )
 
+    # subtask tree
     sorted_subtasks = sorted(task.sub_tasks, key=lambda s: s.position)
-    subtasks_content = []
+    subtask_children = []
 
     for subtask_idx, subtask in enumerate(sorted_subtasks):
-        subtasks_content.append(
+        subtask_children.append(
             _build_subtask(
                 goal_id, task.id, subtask, subtask_idx, len(sorted_subtasks),
                 on_toggle_subtask, on_edit_subtask,
@@ -246,18 +255,30 @@ def _build_task(
         )
 
     # inline "add sub-task..." field
-    subtasks_content.append(
+    subtask_children.append(
         _build_inline_add_field(
             placeholder="Add sub-task...",
             on_submit=lambda title: on_add_subtask_inline(goal_id, task.id, title),
-            indent_left=56, page=page,
+            indent_left=8, page=page,
         )
     )
 
+    # subtask tree container with nested line
+    subtask_tree = ft.Container(
+        content=ft.Column(controls=subtask_children, spacing=0),
+        padding=ft.Padding.only(left=28, top=0, bottom=0),
+        border=ft.Border(left=ft.BorderSide(1.5, TREE_LINE)),
+        margin=ft.Margin.only(left=8),
+    )
+
+    # horizontal connector dash
+    connector = ft.Container(width=10, height=1.5, bgcolor=TREE_LINE)
+
     task_row = ft.Row(
         controls=[
+            connector,
             ft.Checkbox(
-                value=is_done, active_color=TEAL, check_color=BG, scale=0.9,
+                value=is_done, active_color=TEAL, check_color=BG, scale=0.95,
                 on_change=lambda e, tid=task.id: on_toggle_task(goal_id, tid, e.control.value),
             ),
             ft.Container(content=title_editor, expand=True),
@@ -268,9 +289,8 @@ def _build_task(
     )
 
     return ft.Container(
-        content=ft.Column(controls=[task_row, *subtasks_content], spacing=0),
-        padding=ft.Padding.only(left=32, right=8, top=4, bottom=4),
-        border=ft.Border(left=ft.BorderSide(2, SURFACE)),
+        content=ft.Column(controls=[task_row, subtask_tree], spacing=0),
+        padding=ft.Padding.only(top=4, bottom=4, right=4),
     )
 
 
@@ -289,39 +309,39 @@ def _build_subtask(
         page=page, expand=True, strike_through=is_done,
     )
 
-    up_button = ft.IconButton(
-        icon=ft.Icons.ARROW_UPWARD_ROUNDED, icon_size=16,
-        icon_color=TEXT_MUTED if subtask_idx == 0 else TEXT_SECONDARY,
+    # action buttons with circular backgrounds
+    up_btn = _action_circle(
+        ft.Icons.ARROW_UPWARD_ROUNDED, TEXT_SECONDARY, SURFACE, 12,
         on_click=lambda e: on_move_subtask(goal_id, task_id, subtask.id, -1),
-        opacity=0.3 if subtask_idx == 0 else 1.0,
         disabled=subtask_idx == 0,
     )
-
-    down_button = ft.IconButton(
-        icon=ft.Icons.ARROW_DOWNWARD_ROUNDED, icon_size=16,
-        icon_color=TEXT_MUTED if subtask_idx == total_subtasks - 1 else TEXT_SECONDARY,
+    down_btn = _action_circle(
+        ft.Icons.ARROW_DOWNWARD_ROUNDED, TEXT_SECONDARY, SURFACE, 12,
         on_click=lambda e: on_move_subtask(goal_id, task_id, subtask.id, 1),
-        opacity=0.3 if subtask_idx == total_subtasks - 1 else 1.0,
         disabled=subtask_idx == total_subtasks - 1,
     )
-
-    delete_icon = ft.IconButton(
-        icon=ft.Icons.DELETE_OUTLINE_ROUNDED, icon_size=16,
-        icon_color=RED,
+    del_btn = _action_circle(
+        ft.Icons.DELETE_OUTLINE_ROUNDED, RED, f"{RED}18", 12,
         on_click=lambda e: on_delete_subtask(goal_id, task_id, subtask.id),
-        opacity=0.3,
     )
 
     actions_container = ft.Container(
-        content=ft.Row(controls=[up_button, down_button, delete_icon], spacing=4),
-        opacity=0.3,
+        content=ft.Row(
+            controls=[up_btn, down_btn, ft.Container(width=4), del_btn],
+            spacing=4,
+        ),
+        opacity=0.4,
         on_hover=lambda e: _on_hover(e, actions_container),
     )
 
+    # horizontal connector dash
+    connector = ft.Container(width=8, height=1.5, bgcolor=TREE_LINE)
+
     subtask_row = ft.Row(
         controls=[
+            connector,
             ft.Checkbox(
-                value=is_done, active_color=TEAL, check_color=BG, scale=0.8,
+                value=is_done, active_color=TEAL, check_color=BG, scale=0.75,
                 on_change=lambda e, stid=subtask.id: on_toggle_subtask(goal_id, task_id, stid, e.control.value),
             ),
             ft.Container(content=title_editor, expand=True),
@@ -332,8 +352,23 @@ def _build_subtask(
 
     return ft.Container(
         content=subtask_row,
-        padding=ft.Padding.only(left=56, right=8, top=2, bottom=2),
+        padding=ft.Padding.only(top=2, bottom=2, right=4),
     )
+
+
+def _action_circle(icon, color, bg_color, size=14, on_click=None, disabled=False):
+    """circular icon button with colored background."""
+    container = ft.Container(
+        content=ft.Icon(icon, size=size, color=color if not disabled else TEXT_MUTED),
+        width=28, height=28,
+        bgcolor=bg_color if not disabled else "transparent",
+        border_radius=14,
+        alignment=ft.Alignment(0, 0),
+        opacity=0.4 if disabled else 1.0,
+    )
+    if on_click and not disabled:
+        return ft.GestureDetector(content=container, on_tap=on_click)
+    return container
 
 
 # inline add field (notion-style)
@@ -356,14 +391,14 @@ def _build_inline_add_field(placeholder, on_submit, indent_left, page=None):
         border_color="transparent",
         focused_border_color=TEAL,
         cursor_color=TEAL,
-        hint_style=ft.TextStyle(color="#3A4157", size=13, italic=True),
+        hint_style=ft.TextStyle(color="#5A6478", size=13, italic=True),
         text_style=ft.TextStyle(color=TEXT_PRIMARY, size=13),
         content_padding=ft.Padding.symmetric(horizontal=8, vertical=6),
         expand=True,
         on_submit=handle_submit,
     )
 
-    add_icon = ft.Icon(ft.Icons.ADD_ROUNDED, color="#3A4157", size=16)
+    add_icon = ft.Icon(ft.Icons.ADD_ROUNDED, color="#5A6478", size=16)
 
     field_container = ft.Container(
         content=ft.Row(
@@ -371,7 +406,7 @@ def _build_inline_add_field(placeholder, on_submit, indent_left, page=None):
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         padding=ft.Padding.only(left=indent_left, right=8, top=2, bottom=2),
-        border_radius=8, opacity=0.5,
+        border_radius=8, opacity=0.6,
         on_hover=lambda e: _on_hover(e, field_container),
     )
 
@@ -457,7 +492,7 @@ def _build_inline_editor(
 
 def _on_hover(e, container):
     """hover effect - reveal on hover, fade on leave."""
-    container.opacity = 1.0 if e.data == "true" else 0.5
+    container.opacity = 1.0 if e.data == "true" else 0.6
     try:
         container.update()
     except Exception:

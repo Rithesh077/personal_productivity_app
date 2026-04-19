@@ -28,6 +28,24 @@ def build_planner(page: ft.Page):
     wizard_container = ft.Container(visible=False, expand=True)
     main_content = ft.Column(expand=True)
 
+    # loading skeleton shown before goals load
+    def _skeleton_card():
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Container(width=22, height=22, bgcolor=SURFACE, border_radius=4),
+                    ft.Container(expand=True, height=16, bgcolor=SURFACE, border_radius=4),
+                ], spacing=12),
+                ft.Container(height=6, bgcolor=SURFACE, border_radius=4,
+                             margin=ft.Margin.only(left=34, top=4, right=0, bottom=0)),
+            ], spacing=8),
+            bgcolor=CARD_BG, border_radius=12, padding=16,
+            border=ft.Border.all(1, SURFACE),
+        )
+
+    # show skeleton immediately
+    goals_column.controls = [_skeleton_card(), _skeleton_card(), _skeleton_card()]
+
     def sort_goals(goals: list[Goal]) -> list[Goal]:
         """incomplete first (newest on top), then completed (newest on top)."""
         incomplete = [g for g in goals if not g.is_completed]
@@ -396,44 +414,107 @@ def build_planner(page: ft.Page):
         page.run_task(edit_subtask_async)
 
     def handle_delete_task(goal_id, task_id):
-        async def delete_task_async():
+        """show confirmation before deleting a task."""
+        async def show_confirm():
             goal = await get_goal(page, goal_id)
-            if goal:
-                goal.tasks = [t for t in goal.tasks if t.id != task_id]
-                for idx, task in enumerate(goal.tasks):
-                    task.position = idx
-                if goal.tasks:
-                    all_done = all(t.is_completed for t in goal.tasks)
-                    if all_done:
-                        goal.is_completed = True
-                        goal.completed_at = goal.completed_at or utc_now()
-                await save_goal(page, goal)
-                await refresh_goals()
-        page.run_task(delete_task_async)
+            if not goal:
+                return
+            task_obj = next((t for t in goal.tasks if t.id == task_id), None)
+            if not task_obj:
+                return
+            subtask_count = len(task_obj.sub_tasks)
+
+            def close(e=None):
+                page.pop_dialog()
+
+            def confirm(e=None):
+                page.pop_dialog()
+                page.run_task(do_delete_task, goal_id, task_id)
+
+            dlg = ft.AlertDialog(
+                title=ft.Text("Delete Task?", size=16, weight=ft.FontWeight.BOLD),
+                content=ft.Column([
+                    ft.Text(f"Task: {task_obj.title}", size=14, color=TEXT_PRIMARY),
+                    ft.Text(
+                        f"This will also delete {subtask_count} sub-task{'s' if subtask_count != 1 else ''}."
+                        if subtask_count > 0 else "This task has no sub-tasks.",
+                        size=12, color=TEXT_SECONDARY,
+                    ),
+                ], spacing=4, tight=True),
+                actions=[
+                    ft.TextButton("Cancel", on_click=close),
+                    ft.FilledButton("Delete", bgcolor=RED, color="white", on_click=confirm),
+                ],
+            )
+            page.show_dialog(dlg)
+        page.run_task(show_confirm)
+
+    async def do_delete_task(goal_id, task_id):
+        goal = await get_goal(page, goal_id)
+        if goal:
+            goal.tasks = [t for t in goal.tasks if t.id != task_id]
+            for idx, task in enumerate(goal.tasks):
+                task.position = idx
+            if goal.tasks:
+                all_done = all(t.is_completed for t in goal.tasks)
+                if all_done:
+                    goal.is_completed = True
+                    goal.completed_at = goal.completed_at or utc_now()
+            await save_goal(page, goal)
+            await refresh_goals()
 
     def handle_delete_subtask(goal_id, task_id, subtask_id):
-        async def delete_subtask_async():
+        """show confirmation before deleting a subtask."""
+        async def show_confirm():
             goal = await get_goal(page, goal_id)
-            if goal:
-                for task in goal.tasks:
-                    if task.id == task_id:
-                        task.sub_tasks = [s for s in task.sub_tasks if s.id != subtask_id]
-                        for idx, subtask in enumerate(task.sub_tasks):
-                            subtask.position = idx
-                        if task.sub_tasks:
-                            all_subtasks_done = all(s.is_completed for s in task.sub_tasks)
-                            if all_subtasks_done:
-                                task.is_completed = True
-                                task.completed_at = task.completed_at or utc_now()
-                        if goal.tasks:
-                            all_done = all(t.is_completed for t in goal.tasks)
-                            if all_done:
-                                goal.is_completed = True
-                                goal.completed_at = goal.completed_at or utc_now()
-                        break
-                await save_goal(page, goal)
-                await refresh_goals()
-        page.run_task(delete_subtask_async)
+            if not goal:
+                return
+            task_obj = next((t for t in goal.tasks if t.id == task_id), None)
+            if not task_obj:
+                return
+            subtask_obj = next((s for s in task_obj.sub_tasks if s.id == subtask_id), None)
+            if not subtask_obj:
+                return
+
+            def close(e=None):
+                page.pop_dialog()
+
+            def confirm(e=None):
+                page.pop_dialog()
+                page.run_task(do_delete_subtask, goal_id, task_id, subtask_id)
+
+            dlg = ft.AlertDialog(
+                title=ft.Text("Delete Sub-task?", size=16, weight=ft.FontWeight.BOLD),
+                content=ft.Text(f"Sub-task: {subtask_obj.title}", size=14, color=TEXT_PRIMARY),
+                actions=[
+                    ft.TextButton("Cancel", on_click=close),
+                    ft.FilledButton("Delete", bgcolor=RED, color="white", on_click=confirm),
+                ],
+            )
+            page.show_dialog(dlg)
+        page.run_task(show_confirm)
+
+    async def do_delete_subtask(goal_id, task_id, subtask_id):
+        goal = await get_goal(page, goal_id)
+        if goal:
+            for task in goal.tasks:
+                if task.id == task_id:
+                    task.sub_tasks = [s for s in task.sub_tasks if s.id != subtask_id]
+                    for idx, subtask in enumerate(task.sub_tasks):
+                        subtask.position = idx
+                    if task.sub_tasks:
+                        all_subtasks_done = all(s.is_completed for s in task.sub_tasks)
+                        if all_subtasks_done:
+                            task.is_completed = True
+                            task.completed_at = task.completed_at or utc_now()
+                    if goal.tasks:
+                        all_done = all(t.is_completed for t in goal.tasks)
+                        if all_done:
+                            goal.is_completed = True
+                            goal.completed_at = goal.completed_at or utc_now()
+                    break
+            await save_goal(page, goal)
+            await refresh_goals()
 
     def handle_move_task(goal_id, task_id, direction):
         async def move_task_async():
