@@ -30,3 +30,18 @@ COLOR_BOX_SIZE = 12
 TITLE_TRUNCATE_CHART = 30
 TITLE_TRUNCATE_PROGRESS = 20
 TITLE_TRUNCATE_HISTORY = 25
+
+# task list
+GREEN = "#4CAF50"
+
+TAG_COLORS = {
+    "learning": PURPLE,
+    "bug": RED,
+    "admin": AMBER,
+    "creative": TEAL,
+    "health": GREEN,
+    "urgent": RED,
+}
+
+DEFAULT_TAGS = ["learning", "bug", "admin", "creative", "health", "urgent"]
+
