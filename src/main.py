@@ -3,34 +3,9 @@
 import flet as ft
 
 from views.planner import build_planner
-from constants.design import BG, TEAL, SURFACE, TEXT_PRIMARY, TEXT_MUTED, CARD_BG
-
-
-def _build_coming_soon():
-    """placeholder for analytics tab."""
-    return ft.Column(
-        controls=[
-            ft.Container(expand=True),
-            ft.Column(
-                controls=[
-                    ft.Icon(ft.Icons.INSIGHTS_ROUNDED, color=TEXT_MUTED, size=64),
-                    ft.Container(height=16),
-                    ft.Text("Analytics", size=24, weight=ft.FontWeight.BOLD,
-                            color=TEXT_PRIMARY, text_align=ft.TextAlign.CENTER),
-                    ft.Container(height=8),
-                    ft.Text("Coming soon", size=16, color=TEXT_MUTED,
-                            text_align=ft.TextAlign.CENTER),
-                    ft.Text("Track your follow-through rate, on-time %, and more.",
-                            size=13, color=TEXT_MUTED, text_align=ft.TextAlign.CENTER),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=0,
-            ),
-            ft.Container(expand=True),
-        ],
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        expand=True,
-    )
+from views.task_list import build_task_list
+from views.task_list_analytics import build_task_list_analytics
+from constants.design import BG, TEAL, SURFACE
 
 
 def main(page: ft.Page):
@@ -47,10 +22,21 @@ def main(page: ft.Page):
         ),
     )
 
-    planner = build_planner(page)
+    # build views lazily to avoid loading all at startup
+    views = {"planner": None, "task_list": None, "analytics": None}
+
+    def get_view(name):
+        if views[name] is None:
+            if name == "planner":
+                views[name] = build_planner(page)
+            elif name == "task_list":
+                views[name] = build_task_list(page)
+            elif name == "analytics":
+                views[name] = build_task_list_analytics(page)
+        return views[name]
 
     content = ft.Container(
-        content=planner,
+        content=get_view("planner"),
         expand=True,
         padding=ft.Padding.only(top=12, left=16, right=16, bottom=0),
     )
@@ -58,9 +44,15 @@ def main(page: ft.Page):
     def on_nav_change(e):
         idx = e.control.selected_index
         if idx == 0:
-            content.content = planner
+            content.content = get_view("planner")
+        elif idx == 1:
+            # rebuild task list each time to get fresh data
+            views["task_list"] = build_task_list(page)
+            content.content = views["task_list"]
         else:
-            content.content = _build_coming_soon()
+            # rebuild analytics each time to get fresh data
+            views["analytics"] = build_task_list_analytics(page)
+            content.content = views["analytics"]
         page.update()
 
     page.navigation_bar = ft.NavigationBar(
@@ -74,6 +66,11 @@ def main(page: ft.Page):
                 icon=ft.Icons.CHECKLIST_ROUNDED,
                 selected_icon=ft.Icons.CHECKLIST_ROUNDED,
                 label="Planner",
+            ),
+            ft.NavigationBarDestination(
+                icon=ft.Icons.FORMAT_LIST_NUMBERED_ROUNDED,
+                selected_icon=ft.Icons.FORMAT_LIST_NUMBERED_ROUNDED,
+                label="Tasks",
             ),
             ft.NavigationBarDestination(
                 icon=ft.Icons.INSIGHTS_ROUNDED,

@@ -393,10 +393,10 @@ During the Flet pivot, the author focused on the core philosophy ("Did I do what
 
 ---
 
-## ADR-015: Task List Feature — DMN Rescue Queue
+## ADR-015: Priority Tasks List — DMN Rescue Queue
 
 **Date:** Jun 7, 2026
-**Status:** In Design
+**Status:** Implemented
 
 ### Context
 The author identified a friction point in daily productivity: when encountering time-wasting activities (scrolling, default mode network), there's no quick way to pull a pre-prioritized task and start working on it immediately.
@@ -424,8 +424,8 @@ Build a **Task List** — an ordered list of immediate tasks that can be pulled 
 | **Analytics** | Only task list analytics for now | Don't ship half-built analytics, iterate focused |
 
 ### Consequences
-- New data model (`QueueItem`) with its own storage keys
-- New view, new component, new nav tab
+- New data model (`TaskItem`) with its own storage keys (`stride.task_list`, `stride.task_list_completed`)
+- New view (`task_list.py`), new component (`task_list_card.py`), new nav tab
 - Analytics tab evolves from "Coming Soon" to task list completion history
 - First feature built with mobile-first responsive design considerations
 
