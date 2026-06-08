@@ -18,7 +18,7 @@ Apr 2, 2026  Nuclear rewrite: Flet PWA (everything deleted)
 Apr 7, 2026  Version 1.0: MVP with full feature set
 Apr 14, 2026 GitHub Pages deployment + CI/CD
 Apr 19, 2026 UI/UX polish pass
-Jun 7, 2026  Task List feature implementation
+Jun 7, 2026  Task List feature design (current)
 ```
 
 ---
