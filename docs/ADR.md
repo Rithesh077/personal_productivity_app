@@ -431,4 +431,27 @@ Build a **Task List** — an ordered list of immediate tasks that can be pulled 
 
 ---
 
-*Last updated: Jun 7, 2026*
+## ADR-016: Concurrency Control — Resolving RMW Hazards
+
+**Date:** Jun 8, 2026
+**Status:** Implemented
+
+### Context
+When a user interacted with the UI rapidly (e.g., clicking multiple subtask checkboxes in under 100ms), Flet spawned multiple concurrent background tasks. Because the storage layer loads the entire hierarchical JSON, modifies it, and saves it back, this created a classic **Read-Modify-Write (RMW) hazard**. Task B would read the state before Task A saved, and Task B's save would overwrite Task A's modification.
+
+### Decision
+Implemented a global `asyncio.Lock()` (Mutex) at the storage layer (`storage.py`) and a `run_locked_task()` wrapper. All UI-triggered background tasks that read or write state are now executed through this locked wrapper.
+
+### Rationale
+- **Alternative 1 (Normalization):** Flattening the database into separate tables solves some overwrite issues, but cascading logic (subtask completion triggering task completion) still requires locking to prevent race conditions during parent state evaluation.
+- **Alternative 2 (Optimistic UI + Event Queue):** Tracking temporary state locally and queueing background saves is robust but significantly increases architectural complexity for a zero-backend PWA.
+- **Chosen Solution (`asyncio.Lock`):** Since Flet runs its async tasks on a single asyncio event loop, a standard mutex forces all rapid clicks to execute their read-modify-write cycles sequentially. It's simple, native to Python, and completely eliminates the data loss hazard without changing the underlying JSON schema.
+
+### Consequences
+- UI interactions that trigger storage writes are now strictly serialized.
+- Zero risk of dropped clicks or state overwrites.
+- Replaced `page.run_task(handler)` with `run_locked_task(page, handler)` across the planner and task list views.
+
+---
+
+*Last updated: Jun 8, 2026*
