@@ -7,6 +7,7 @@ includes schema versioning so data survives app updates.
 import json
 from typing import Optional
 import uuid
+import asyncio
 from models.goal import Goal
 import flet as ft
 
@@ -16,6 +17,23 @@ SCHEMA_VERSION = 1
 
 # skip repeated migration checks after first load
 _migration_done = False
+
+_storage_lock = None
+
+def get_storage_lock() -> asyncio.Lock:
+    """get a global lock to prevent read-modify-write hazards."""
+    global _storage_lock
+    if _storage_lock is None:
+        _storage_lock = asyncio.Lock()
+    return _storage_lock
+
+
+def run_locked_task(page, handler, *args):
+    """run an async function wrapped in the global storage lock to prevent race conditions."""
+    async def wrapper():
+        async with get_storage_lock():
+            await handler(*args)
+    page.run_task(wrapper)
 
 
 def _ensure_id(value: Optional[str]) -> str:

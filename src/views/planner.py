@@ -3,7 +3,7 @@
 import flet as ft
 from datetime import datetime, time
 
-from services.storage import load_goals, save_goal, delete_goal, get_goal
+from services.storage import run_locked_task, load_goals, save_goal, delete_goal, get_goal
 from models.goal import Goal, Task, SubTask
 from components.goal_card import GoalCard
 from components.goal_wizard import GoalWizard
@@ -119,7 +119,7 @@ def build_planner(page: ft.Page):
             await refresh_goals()
 
     def toggle_goal(goal_id, value):
-        page.run_task(toggle_goal_async, goal_id, value)
+        run_locked_task(page, toggle_goal_async, goal_id, value)
 
     async def toggle_task_async(goal_id, task_id, value):
         """toggle task. cascades to all subtasks."""
@@ -147,7 +147,7 @@ def build_planner(page: ft.Page):
             await refresh_goals()
 
     def toggle_task(goal_id, task_id, value):
-        page.run_task(toggle_task_async, goal_id, task_id, value)
+        run_locked_task(page, toggle_task_async, goal_id, task_id, value)
 
     async def toggle_subtask_async(goal_id, task_id, subtask_id, value):
         """toggle subtask. auto-completes parent task/goal if all done."""
@@ -184,7 +184,7 @@ def build_planner(page: ft.Page):
             await refresh_goals()
 
     def toggle_subtask(goal_id, task_id, subtask_id, value):
-        page.run_task(toggle_subtask_async, goal_id, task_id, subtask_id, value)
+        run_locked_task(page, toggle_subtask_async, goal_id, task_id, subtask_id, value)
 
     # action handlers
 
@@ -193,7 +193,7 @@ def build_planner(page: ft.Page):
             state["expanded_goal_id"] = None
         else:
             state["expanded_goal_id"] = goal_id
-        page.run_task(refresh_goals)
+        run_locked_task(page, refresh_goals)
 
     def handle_delete_goal(goal_id):
         """show confirmation dialog before deleting goal."""
@@ -210,7 +210,7 @@ def build_planner(page: ft.Page):
 
             def confirm_delete(e=None):
                 page.pop_dialog()
-                page.run_task(delete_goal_with_undo, goal_id, goal)
+                run_locked_task(page, delete_goal_with_undo, goal_id, goal)
 
             dlg = ft.AlertDialog(
                 title=ft.Text("Delete Goal?", size=18, weight=ft.FontWeight.BOLD),
@@ -235,7 +235,7 @@ def build_planner(page: ft.Page):
             )
             page.show_dialog(dlg)
 
-        page.run_task(show_confirmation)
+        run_locked_task(page, show_confirmation)
 
     async def delete_goal_with_undo(goal_id, goal_backup):
         """delete goal and show undo snackbar."""
@@ -267,7 +267,7 @@ def build_planner(page: ft.Page):
                 state["undo_stack"].remove(undo_entry)
             page.pop_dialog()
             await refresh_goals()
-        page.run_task(restore)
+        run_locked_task(page, restore)
 
     # inline add handlers
 
@@ -285,7 +285,7 @@ def build_planner(page: ft.Page):
             goal.completed_at = None
             await save_goal(page, goal)
             await refresh_goals()
-        page.run_task(add_task_async)
+        run_locked_task(page, add_task_async)
 
     def handle_add_subtask_inline(goal_id, task_id, title):
         """add a subtask from the inline field."""
@@ -305,7 +305,7 @@ def build_planner(page: ft.Page):
             goal.completed_at = None
             await save_goal(page, goal)
             await refresh_goals()
-        page.run_task(add_subtask_async)
+        run_locked_task(page, add_subtask_async)
 
     # deadline picker flow
 
@@ -315,7 +315,7 @@ def build_planner(page: ft.Page):
 
         def on_date_selected(e):
             picker_state["selected_date"] = date_picker.value
-            page.run_task(show_time_option)
+            run_locked_task(page, show_time_option)
 
         date_picker = ft.DatePicker(
             value=datetime.now(),
@@ -333,7 +333,7 @@ def build_planner(page: ft.Page):
                 selected = picker_state["selected_date"]
                 target_date = extract_local_date(selected)
                 deadline_dt = datetime.combine(target_date, time(23, 59, 59))
-                page.run_task(save_deadline, goal_id, deadline_dt)
+                run_locked_task(page, save_deadline, goal_id, deadline_dt)
 
             def open_time_picker(e=None):
                 page.pop_dialog()
@@ -342,7 +342,7 @@ def build_planner(page: ft.Page):
                     selected = picker_state["selected_date"]
                     target_date = extract_local_date(selected)
                     deadline_dt = datetime.combine(target_date, time_picker.value)
-                    page.run_task(save_deadline, goal_id, deadline_dt)
+                    run_locked_task(page, save_deadline, goal_id, deadline_dt)
 
                 time_picker = ft.TimePicker(
                     value=time(23, 59),
@@ -395,7 +395,7 @@ def build_planner(page: ft.Page):
                         break
                 await save_goal(page, goal)
                 await refresh_goals()
-        page.run_task(edit_task_async)
+        run_locked_task(page, edit_task_async)
 
     def handle_edit_subtask(goal_id, task_id, subtask_id, new_title):
         async def edit_subtask_async():
@@ -411,7 +411,7 @@ def build_planner(page: ft.Page):
                         break
                 await save_goal(page, goal)
                 await refresh_goals()
-        page.run_task(edit_subtask_async)
+        run_locked_task(page, edit_subtask_async)
 
     def handle_delete_task(goal_id, task_id):
         """show confirmation before deleting a task."""
@@ -429,7 +429,7 @@ def build_planner(page: ft.Page):
 
             def confirm(e=None):
                 page.pop_dialog()
-                page.run_task(do_delete_task, goal_id, task_id)
+                run_locked_task(page, do_delete_task, goal_id, task_id)
 
             dlg = ft.AlertDialog(
                 title=ft.Text("Delete Task?", size=16, weight=ft.FontWeight.BOLD),
@@ -447,7 +447,7 @@ def build_planner(page: ft.Page):
                 ],
             )
             page.show_dialog(dlg)
-        page.run_task(show_confirm)
+        run_locked_task(page, show_confirm)
 
     async def do_delete_task(goal_id, task_id):
         goal = await get_goal(page, goal_id)
@@ -481,7 +481,7 @@ def build_planner(page: ft.Page):
 
             def confirm(e=None):
                 page.pop_dialog()
-                page.run_task(do_delete_subtask, goal_id, task_id, subtask_id)
+                run_locked_task(page, do_delete_subtask, goal_id, task_id, subtask_id)
 
             dlg = ft.AlertDialog(
                 title=ft.Text("Delete Sub-task?", size=16, weight=ft.FontWeight.BOLD),
@@ -492,7 +492,7 @@ def build_planner(page: ft.Page):
                 ],
             )
             page.show_dialog(dlg)
-        page.run_task(show_confirm)
+        run_locked_task(page, show_confirm)
 
     async def do_delete_subtask(goal_id, task_id, subtask_id):
         goal = await get_goal(page, goal_id)
@@ -533,7 +533,7 @@ def build_planner(page: ft.Page):
                             task.position = idx
                         await save_goal(page, goal)
                         await refresh_goals()
-        page.run_task(move_task_async)
+        run_locked_task(page, move_task_async)
 
     def handle_move_subtask(goal_id, task_id, subtask_id, direction):
         async def move_subtask_async():
@@ -555,7 +555,7 @@ def build_planner(page: ft.Page):
                                 await save_goal(page, goal)
                                 await refresh_goals()
                         break
-        page.run_task(move_subtask_async)
+        run_locked_task(page, move_subtask_async)
 
     def handle_edit_goal(goal_id, new_title):
         async def edit_goal_async():
@@ -565,7 +565,7 @@ def build_planner(page: ft.Page):
                 goal.updated_at = utc_now()
                 await save_goal(page, goal)
                 await refresh_goals()
-        page.run_task(edit_goal_async)
+        run_locked_task(page, edit_goal_async)
 
     # wizard handlers
 
@@ -590,7 +590,7 @@ def build_planner(page: ft.Page):
         await refresh_goals()
 
     def save_new_goal(goal):
-        page.run_task(save_new_goal_async, goal)
+        run_locked_task(page, save_new_goal_async, goal)
 
     # header
     header = ft.Row(
@@ -654,7 +654,7 @@ def build_planner(page: ft.Page):
     main_content.spacing = 12
 
     # initial load
-    page.run_task(refresh_goals)
+    run_locked_task(page, refresh_goals)
 
     return ft.Stack(
         controls=[main_content, wizard_container],

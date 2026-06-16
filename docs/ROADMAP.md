@@ -6,7 +6,8 @@
 
 ## Highest Priority
 
-- [ ] **Priority List (DMN Rescue List)** — A personal priority queue of the next N immediate tasks. When encountering time-wasting friction, pull index 0 and start solving/learning. Completed items flow to analytics.
+- [x] **Priority List (DMN Rescue List)** — A personal priority queue of the next N immediate tasks. When encountering time-wasting friction, pull index 0 and start solving/learning. Completed items flow to analytics.
+- [ ] **Concurrency / RMW Hazard Fix** — Separate modular functions for each component of a goal, OR implement a global `asyncio.Lock()` temporary state queue to prevent rapid-click race conditions and database overwrites. *(Code implemented experimentally, requires your review/optimization)*
 - [ ] **Cross-Device Sync (No Signup)** — Sync data across devices without registration. *(Design TBD)*
 
 ---
