@@ -12,7 +12,7 @@ import flet as ft
 from typing import Optional
 
 from services.storage import (
-    load_task_list, save_task_list, save_task_item, delete_task_item,
+    run_locked_task, load_task_list, save_task_list, save_task_item, delete_task_item,
     complete_task_item, load_goals, load_custom_tags, save_custom_tags,
 )
 from models.task_item import TaskItem, DEFAULT_TAGS
@@ -196,7 +196,7 @@ def build_task_list(page: ft.Page):
             await save_task_list(page, items)
             await refresh_list()
 
-        page.run_task(do_reorder)
+        run_locked_task(page, do_reorder)
 
     # ── complete ──
 
@@ -230,7 +230,7 @@ def build_task_list(page: ft.Page):
 
             def confirm(e=None):
                 page.pop_dialog()
-                page.run_task(do_complete, item_id)
+                run_locked_task(page, do_complete, item_id)
 
             dlg = ft.AlertDialog(
                 title=ft.Text("Complete this task?", size=16, weight=ft.FontWeight.BOLD),
@@ -246,7 +246,7 @@ def build_task_list(page: ft.Page):
             )
             page.show_dialog(dlg)
 
-        page.run_task(show_confirm)
+        run_locked_task(page, show_confirm)
 
     async def do_complete(item_id):
         await complete_task_item(page, item_id)
@@ -270,7 +270,7 @@ def build_task_list(page: ft.Page):
 
             def confirm(e=None):
                 page.pop_dialog()
-                page.run_task(do_delete, item_id)
+                run_locked_task(page, do_delete, item_id)
 
             dlg = ft.AlertDialog(
                 title=ft.Text("Delete this task?", size=16, weight=ft.FontWeight.BOLD),
@@ -282,7 +282,7 @@ def build_task_list(page: ft.Page):
             )
             page.show_dialog(dlg)
 
-        page.run_task(show_confirm)
+        run_locked_task(page, show_confirm)
 
     async def do_delete(item_id):
         await delete_task_item(page, item_id)
@@ -305,7 +305,7 @@ def build_task_list(page: ft.Page):
                 insert_position=item.position,
             )
 
-        page.run_task(show_edit)
+        run_locked_task(page, show_edit)
 
     # ── add dialog ──
 
@@ -387,7 +387,7 @@ def build_task_list(page: ft.Page):
                     # save custom tag
                     if new_tag not in state["custom_tags"]:
                         state["custom_tags"].append(new_tag)
-                        page.run_task(save_custom_tags, page, state["custom_tags"])
+                        run_locked_task(page, save_custom_tags, page, state["custom_tags"])
                 elif new_tag in all_tags:
                     selected_tags.add(new_tag)
                 custom_tag_field.value = ""
@@ -444,7 +444,7 @@ def build_task_list(page: ft.Page):
                 edit_item.tags = list(selected_tags)
                 edit_item.linked_goal_id = goal_dropdown.value or None
                 page.pop_dialog()
-                page.run_task(do_save_existing, edit_item)
+                run_locked_task(page, do_save_existing, edit_item)
             else:
                 new_item = TaskItem(
                     title=title,
@@ -455,7 +455,7 @@ def build_task_list(page: ft.Page):
                     created_at=utc_now(),
                 )
                 page.pop_dialog()
-                page.run_task(do_save_new, new_item)
+                run_locked_task(page, do_save_new, new_item)
 
         dlg = ft.AlertDialog(
             title=ft.Text(
@@ -572,7 +572,7 @@ def build_task_list(page: ft.Page):
         await refresh_list()
         await update_stats()
 
-    page.run_task(initial_load)
+    run_locked_task(page, initial_load)
 
     # ── layout ──
 

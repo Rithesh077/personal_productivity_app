@@ -64,7 +64,7 @@ Tests cover:
 
 ## Architecture Decisions
 
-See [ADR.md](./ADR.md) for a complete record of every architectural decision, from the Flask prototype to the current Flet PWA.
+See [ADR.md](./ADR.md) for a complete record of every architectural decision, from the Flask prototype to the current Flet PWA. See [ROADMAP.md](./ROADMAP.md) for the feature roadmap and to-dos.
 
 ## Key Design Principles
 
