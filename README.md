@@ -2,9 +2,23 @@
 
 **Plan. Execute. Improve.**
 
-A privacy-first PWA that answers one question: _"Did I actually do what I planned?"_
+A privacy-first personal app built for exactly one user. It currently answers one question: _"Did I actually do what I planned?"_
 
-No AI. No integrations. No account. Runs entirely in your browser using localStorage.
+No integrations. No account. No cloud. Runs entirely in your browser using localStorage.
+
+---
+
+> ## ⚠️ Pivoting
+>
+> As of **Jul 26, 2026** this project is migrating from Flet/Python to **Tauri + Rust**, and widening from a goal tracker to a personal system built around an encrypted **vault + journal** and an offline **intelligence engine**.
+>
+> Everything below describes the **current** Flet PWA, which still runs. It will be replaced.
+>
+> - [Vision](docs/VISION.md) — what this is becoming, and why
+> - [ADR-017 onward](docs/ADR.md) — the pivot decisions and rationale
+> - [Roadmap](docs/ROADMAP.md) — what's next, in order
+>
+> Two things below will stop being true: the PWA deployment ends with the migration, and local (never cloud) AI comes into scope — see [ADR-023](docs/ADR.md).
 
 ---
 
