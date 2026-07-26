@@ -18,7 +18,9 @@ Apr 2, 2026  Nuclear rewrite: Flet PWA (everything deleted)
 Apr 7, 2026  Version 1.0: MVP with full feature set
 Apr 14, 2026 GitHub Pages deployment + CI/CD
 Apr 19, 2026 UI/UX polish pass
-Jun 7, 2026  Task List feature design (current)
+Jun 7, 2026  Task List feature design
+Jun 8, 2026  Concurrency lock (RMW hazard fix)
+Jul 26, 2026 Second pivot: Tauri + Rust, widened philosophy (current)
 ```
 
 ---
@@ -454,4 +456,313 @@ Implemented a global `asyncio.Lock()` (Mutex) at the storage layer (`storage.py`
 
 ---
 
-*Last updated: Jun 8, 2026*
+## ADR-017: The Second Pivot, Tauri and Rust
+
+**Date:** Jul 26, 2026
+**Status:** Active
+**Supersedes:** ADR-003. Amends ADR-001
+
+### Context
+
+Two separate things changed at the same time, and it's worth keeping them apart:
+
+1. A framework migration. Off Flet and Python, onto Tauri with a Rust core.
+2. A product change. The philosophy widens past *"did I do what I planned?"*
+
+They happened together so they're recorded together, but either could have happened without the other.
+
+### Decision
+
+Rewrite in Rust, ship through Tauri.
+
+On the product side, the question becomes *"does this make my day less annoying?"*. The old question survives as the planner module's job. Three larger modules join it (vault + journal, the intelligence engine, sync) and once those land the goal tracker becomes a subordinate piece. Detail in [VISION.md](./VISION.md).
+
+### Rationale
+
+Why Rust, honestly: to learn it properly from the ground up. That's a stated project goal, not a side effect (ADR-024). My background is C, so manual memory management isn't new territory, and Rust is the obvious next step rather than a leap.
+
+Why Tauri:
+- A native desktop app with an actual systems language underneath, which Flet couldn't give me
+- Tauri v2 targets mobile, so the cross-platform reach that motivated ADR-003 survives
+- Small binaries, uses the OS webview instead of shipping a browser engine
+- Direct filesystem, SQLite and keychain access, all of which the vault needs and a browser sandbox won't allow
+
+Why the philosophy widened: I've barely used the app and I still prefer paper. What it *did* turn out to be good for was analysing what I'd been doing. So rather than keep polishing a goal tracker that loses to a notebook on capture speed, move toward what software is actually better at, which is retrieval, persistence, and looking across long stretches of time.
+
+### Consequences
+
+- The Python `src/` tree, about 2900 lines, becomes reference material. The 67 passing tests document intended behaviour and should be ported to Rust rather than deleted.
+- The PWA dies. GitHub Pages deployment ends with the migration, so ADR-012 is terminal. That's a real loss of cross-device access, and it's why sync gets promoted to a headline feature in ADR-022.
+- The migration runs through eight toy projects, each producing a module the real app keeps. Specs in `local/rust-toys/`.
+- The name doesn't change for now. That's a deliberate deferral, not an oversight.
+
+---
+
+## ADR-018: Core-First Workspace Layout
+
+**Date:** Jul 26, 2026
+**Status:** Active
+
+### Context
+
+I might split this into several apps or repos later, one per device scope. My words at the time were "how hard can copy pasting and rewiring the code be right?......right?"
+
+The honest answer is that it's trivial if the core has no UI dependencies and awful if it does. The current Flet app is the proof: business logic and layout are tangled together throughout `planner.py`, all 662 lines of it, so nothing can be lifted out without a rewrite.
+
+### Decision
+
+A Cargo workspace with a core crate that has no UI in it.
+
+```
+core/     models, storage, planner logic, vault, sync. no UI deps
+tui/      ratatui frontend, consumes core
+desktop/  Tauri app, consumes core
+mobile/   later, consumes core
+```
+
+Every frontend is a consumer of `core`. `core` never knows a frontend exists.
+
+### Rationale
+
+- Reduces the future split to moving a directory rather than untangling a codebase
+- `core` becomes testable without a UI, which the Flet views never were
+- The TUI and Tauri can both exist during the transition (ADR-021) instead of one blocking the other
+- It forces honest interface design. If `core` needs to ask me something, that is a return value, not a dialog box
+
+### Consequences
+
+- A bit more ceremony up front: workspace manifests, explicit crate boundaries
+- Any UI concern that leaks into `core` is a bug to fix immediately, not a shortcut to live with
+- Toys 1 to 5 build `core` modules, toys 6 and 7 build consumers. The curriculum and the architecture are deliberately the same shape
+
+---
+
+## ADR-019: SQLite Replaces SharedPreferences
+
+**Date:** Jul 26, 2026
+**Status:** Active
+**Supersedes:** ADR-006
+
+### Context
+
+ADR-006 picked SharedPreferences (a JSON blob in localStorage) because it was the simplest thing that worked on both web and desktop in Flet. It came with known costs: a 5 to 10MB ceiling, a full blob rewrite on every change, and the read-modify-write hazard ADR-016 had to fix with a mutex.
+
+The new modules break all of those assumptions. Journals, indexed study material and encrypted secrets are neither small nor happy being rewritten wholesale.
+
+### Decision
+
+SQLite for everything, with the constraint that the data stays portable. A file I can copy, back up and move between devices.
+
+### Rationale
+
+- Real queries, which the intelligence engine needs and a JSON blob can't do
+- Partial writes and transactions, so a whole class of RMW hazard stops existing at the storage layer
+- One portable file, which is exactly the SSD-death scenario from VISION.md
+- Well proven, and a decent way to learn how databases work from underneath
+- Encrypted blobs sit in it fine, so the vault composes without a fight
+
+### Alternatives Considered
+
+JSON files. Simplest, but no queries and the same blob rewrite problem. Rejected.
+
+A hand-rolled storage engine. Genuinely tempting given the learning goal and consistent with the no-imports instinct, but rejected on scope. That effort is better spent on the vault and on sync, which are the parts nobody else can build for this project.
+
+### Consequences
+
+- Schema migrations become real migrations. The ADR-007 framework was never actually exercised
+- Sync semantics have to be decided at row level rather than blob level, which is harder but is the right problem (ADR-022)
+- The ADR-016 `asyncio.Lock` has no direct successor. SQLite transactions plus `Arc<Mutex>` cover it, and the compiler refuses the shared-mutable-state bug outright
+
+---
+
+## ADR-020: Vault Architecture
+
+**Date:** Jul 26, 2026
+**Status:** Active. Design settled, some mechanics still open
+
+### Context
+
+The vault and journal are the main thing. The scenario driving it is specific: the laptop dies, the SSD corrupts, and I lose passwords and context and spend weeks rebuilding. The vault exists so that stops being possible.
+
+### Threat model
+
+What I'm defending against, in order:
+
+1. Someone with the disk, or the backup, or the synced copy. This is the main one, because sync means encrypted data will deliberately be sitting on more than one device.
+2. Casual access to an unlocked machine. Hence auto-relock and the separate journal unlock state.
+3. Interception during device-to-device sync.
+
+Not defending against a compromised OS with a kernel-level keylogger. Out of scope for a personal app.
+
+### Decision
+
+Two independent unlock states, off one master password:
+
+```
+master password --KDF--> master key
+                            |-> journal key   (unlocks the journal)
+                            |-> secrets key   (unlocks passwords/2FA)
+```
+
+Unlocking the journal must not unlock the secrets vault. Reading yesterday's entry over lunch is a different act from opening the password store and the app should treat it that way.
+
+Rules:
+- Master password on every launch. No "remember me"
+- 2FA to change a password, not to read one. Writing is the higher bar
+- Auto-relock on a timeout
+- Everything offline. No cloud, no accounts, no recovery server
+- Browser autofill later, as its own piece of work with its own attack surface
+
+### Rationale
+
+Two keys instead of one because the two data sets have genuinely different exposure and access patterns. With one key, every casual journal read hands over full password access, which is a bad trade for a convenience I never asked for.
+
+This is also the one place where the hand-roll-by-default instinct gets overridden. Cryptographic primitives come from audited crates: Argon2 for key derivation, an AEAD like ChaCha20-Poly1305 or AES-GCM, plus something to zero memory. Rolling my own is how personal vaults get quietly broken, and a break here loses precisely the data this app exists to protect. Everything around the primitives (key hierarchy, file format, unlock flow, relock policy) is hand-built, and that's where the learning is anyway.
+
+### Open questions
+
+Offline password reset is unsolved. My sketch was that a reset sends a random number to the app on my phone, which collapses because the phone needs the vault to receive it. Options are printed recovery codes kept physically, secret sharing across devices, or accepting that a forgotten master password means the data is gone. Undecided.
+
+What the second factor physically is, with no server and no cloud. A TOTP seed stored inside the vault is circular. Probably a hardware token or a second enrolled device.
+
+### Consequences
+
+- Two unlock states means two session lifetimes to manage, on every frontend
+- Sync moves ciphertext only, and no device should ever hold a decrypted copy in transit
+- Losing the master password with no recovery path is currently total loss. Until that open question is settled the UI has to say so loudly
+
+---
+
+## ADR-021: TUI First, React Later
+
+**Date:** Jul 26, 2026
+**Status:** Active
+
+### Context
+
+Tauri needs a web frontend. I want React, partly for what it can do and partly because UI design is the break I take from technical work, and I want to learn UI/UX from scratch and design something actually mine. But that design doesn't exist yet, and waiting on it would block every backend module.
+
+### Decision
+
+Ship a TUI as the interim daily driver straight after the migration. Build the Tauri and React shell when there's a design worth building.
+
+Both consume `core` (ADR-018), so this is sequencing, not a fork.
+
+### Rationale
+
+- Unblocks the vault, journal and engine, none of which need a pretty interface to be useful
+- A TUI is quick to build, quick to use, and honest about being a tool rather than a product
+- Gets the app into actual daily use sooner, which matters given I've barely used the current one
+- Takes the pressure off the visual design. The unique UI is supposed to be the fun part, and designing it against a deadline would ruin that
+- Terminal-first fits how I work anyway, and it echoes the Oct 2025 CLI phase from ADR-002, which was enjoyable and died for lack of persistence and mobile reach. `core` solves both
+
+### Consequences
+
+- Two frontends to maintain once React lands. Acceptable, since the TUI remains useful over SSH and doubles as a permanent test harness for `core`
+- The design tokens from `constants/design.py` (ADR-010) carry over conceptually. Colours and spacing map to both a terminal palette and CSS variables
+- Mobile gets neither at first. Mobile arrives with React
+
+---
+
+## ADR-022: Offline-Only Sync
+
+**Date:** Jul 26, 2026
+**Status:** Accepted in principle. Design open, feasibility unproven
+
+### Context
+
+ADR-005 accepted no cross-device sync as the price of a zero-backend architecture. That trade doesn't hold any more. The PWA dies with the migration (ADR-017), taking the only cross-device access path with it, and the whole point of the vault is surviving the loss of one machine. Data sitting on one device isn't backed up.
+
+### Decision
+
+Device-to-device sync with no cloud at all. Not cloud-optional, not a self-hosted server, nothing I don't physically own. LAN discovery, direct transfer, or sneakernet.
+
+### Rationale
+
+Non-negotiable one in VISION.md is that it's offline. Syncing ciphertext to a rented box would quietly undo the privacy posture the whole thing is built on.
+
+Beyond that, edge compute, cybersecurity and IoT intersect precisely here, and those are the three areas I am most interested in. I may not succeed at it, and that is accepted going in. It is the highest-risk item in the project, and the reasoning is that the learning pays for itself even if the feature never ships.
+
+### Open questions
+
+- Discovery. mDNS on the LAN, manual pairing with a QR code, or both
+- Transport. what provides authenticated encryption between devices, and how devices get enrolled
+- Conflict resolution. Journal entries are append-mostly and easy. Vault entries are mutable, and last-write-wins can silently destroy a password change made on another device. CRDTs are the principled answer and a serious undertaking
+- Whether a phone with no app installed ever gets read-only access, and how, without a server
+
+### Consequences
+
+- Sync design constrains the SQLite schema (ADR-019). Per-row versioning or vector clocks are far cheaper to design in now than to retrofit
+- Scheduled last of the toy projects, because it depends on the vault, the storage layer, and real data existing first
+- If it turns out to be infeasible, the fallback is manual encrypted export and import. Worse, but it still covers the SSD-death scenario, which is the actual requirement
+
+---
+
+## ADR-023: Local AI, and Reversing "No AI"
+
+**Date:** Jul 26, 2026
+**Status:** Active. Direction set, implementation deferred
+
+### Context
+
+The README has said "No AI" since the Flet rewrite. I've now described the intelligence engine as an engine to replace LLMs from my life, while also saying we'll have local AI. That reads as a contradiction and isn't one.
+
+### Decision
+
+Local AI is in scope. Cloud AI isn't.
+
+The goal is ending my dependence on someone else's LLM service: the round trip, the account, my data leaving the device, the vendor who can change terms or disappear. The model runs on my hardware, over my data, with the network unplugged.
+
+Uses: coding help for assignments, exam prep (ISI, JAM, ISS), and reading my own journal and activity data to put a plan together.
+
+### Rationale
+
+This is consistent with the offline non-negotiable. A local model is actually *more* aligned with the privacy posture than where I am now, where using a cloud LLM means my questions leave the machine entirely.
+
+And the journal and activity data are exactly the context an external model can never have, which is the thing that would make a local one genuinely better rather than just more private.
+
+### Consequences
+
+- The README's "No AI" line is now false and has to be rewritten
+- ADR-005's privacy rationale gets stronger, not weaker. Data still never leaves the device
+- Model choice and runtime are deferred until there's a corpus worth feeding it. Building inference before there's data is backwards
+- The bigger version, a model that reads the whole device and proposes a reorganisation and automation plan, is parked. It's too much right now and I need features that actually help me first. Recorded because it's deliberate, not forgotten
+
+---
+
+## ADR-024: Learning Is a Requirement
+
+**Date:** Jul 26, 2026
+**Status:** Active
+
+### Context
+
+Most projects treat "the author learned something" as a nice side effect. Here it carries the same weight as shipping. The pivot to Rust exists substantially so that I learn Rust from the ground up, and so I can build creative solutions and modules instead of calling a billion imports.
+
+### Decision
+
+Learning value is a legitimate tiebreaker when choosing between implementations. Where both a hand-rolled module and a dependency would be reasonable, hand-roll it.
+
+The exception is cryptography. Always audited crates. Getting it wrong loses the data the app exists to protect, and hand-rolling it teaches the wrong lesson anyway.
+
+Secondary exceptions where the wheel isn't worth reinventing: SQLite, the Tauri runtime, serde, and the terminal and rendering backends.
+
+### Working method
+
+- I write the code, test it and refactor it. Assessment comes after. The reverse only happens if I say so
+- No unsolicited solutions when I'm stuck. I'll ask
+- Explain things through C, which is my strongest language and the right bridge to ownership and lifetimes
+
+### Rationale
+
+Optimising purely for shipping speed means importing something for everything and learning nothing, which leaves me with an app I don't understand well enough to maintain on my own. For a one-person personal tool that's a slow-motion failure. Optimising purely for learning means hand-rolling crypto and losing the vault. The line between the two is drawn above on purpose.
+
+### Consequences
+
+- Development is slower, deliberately
+- Every module gets a toy project first (`local/rust-toys/`), each producing code the real app keeps, so the learning detour and the migration are the same path
+- Progress is tracked in [LEARNING.md](./LEARNING.md), including which concepts I actually understand versus which ones I've merely used
+
+---
+
+*Last updated: Jul 26, 2026*
