@@ -1,0 +1,82 @@
+.tasklist-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.tasklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+}
+.tasklist-header h1 { font-size: var(--font-size-3xl); font-weight: 800; letter-spacing: -0.5px; }
+.tasklist-subtitle { font-size: var(--font-size-md); color: var(--text-muted); margin-top: var(--space-1); }
+
+/* Add form */
+.tl-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--card-bg);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  animation: slideUp var(--transition-normal);
+}
+.tl-add-input, .tl-add-textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-base);
+  background: var(--surface);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  resize: none;
+}
+.tl-add-input:focus, .tl-add-textarea:focus { border-color: var(--teal); }
+.tl-add-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+
+/* Task list */
+.tasklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Completed section */
+.completed-section { margin-top: var(--space-6); }
+.completed-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-md);
+  color: var(--text-muted);
+  padding: var(--space-2) 0;
+  width: 100%;
+  text-align: left;
+}
+.clear-link {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--red);
+  cursor: pointer;
+}
+.clear-link:hover { text-decoration: underline; }
+
+.completed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.completed-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  opacity: 0.5;
+}
+.completed-check { color: var(--teal); font-size: 12px; }
+.completed-title { font-size: var(--font-size-md); text-decoration: line-through; }

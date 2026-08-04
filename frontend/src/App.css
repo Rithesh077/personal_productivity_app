@@ -1,0 +1,111 @@
+/* ── App Layout ───────────────────────────────────────────── */
+
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Navigation ───────────────────────────────────────────── */
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 0 var(--space-6);
+  height: 56px;
+  background: rgba(11, 15, 26, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--surface);
+}
+
+.nav-brand {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-links {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.nav-link:hover {
+  color: var(--text-secondary);
+  background: var(--surface);
+}
+
+.nav-link.active {
+  color: var(--teal);
+  background: var(--teal-muted);
+}
+
+.nav-icon {
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+.nav-label {
+  line-height: 1;
+}
+
+/* ── Main content ─────────────────────────────────────────── */
+
+.app-main {
+  flex: 1;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .app-nav {
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    height: 60px;
+    justify-content: center;
+    border-bottom: none;
+    border-top: 1px solid var(--surface);
+    padding: 0 var(--space-4);
+  }
+
+  .nav-brand { display: none; }
+
+  .nav-links {
+    flex: 1;
+    justify-content: space-around;
+  }
+
+  .nav-link {
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-2);
+  }
+
+  .nav-icon { font-size: var(--font-size-xl); }
+  .nav-label { font-size: var(--font-size-xs); }
+
+  .app-main { padding-bottom: 70px; }
+}
