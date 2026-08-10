@@ -8,26 +8,17 @@ No cloud. No accounts. No integrations. All data stays on the device.
 
 ---
 
-> ## Project structure
->
-> As of **Aug 10, 2026**, Stride is a three-part system:
->
-> | Directory | What | Status |
-> |-----------|------|--------|
-> | `frontend/` | React + Vite UI | **Built** |
-> | `backend/` | Python + FastAPI API + SQLite | **Built** |
-> | `registry/` | Rust encrypted storage (keys + logbook) | Not started |
-> | `src/` | **Legacy** Flet PWA (still deployed, still works) | Active until React has parity |
->
-> The Flet PWA stays live on GitHub Pages until the new stack reaches feature parity ([ADR-027](docs/ADR.md)).
->
-> Read [VISION.md](docs/VISION.md) for where this is going, and [ADR-025 onward](docs/ADR.md) for the restructure decisions.
+## Architecture
 
----
+| Directory | Stack | Purpose |
+|-----------|-------|---------|
+| `frontend/` | React + Vite | UI |
+| `backend/` | Python + FastAPI + SQLite | API + storage |
+| `registry/` | Rust (planned) | Encrypted storage (keys + logbook) |
+
+The legacy Flet PWA (`src/`) is archived. See [ADR-025](docs/ADR.md).
 
 ## Features
-
-### New stack (React + FastAPI)
 
 - **Hierarchical Goals** — Create goals with tasks and sub-tasks, cascading completion via SQLite triggers
 - **Priority Task List** — A DMN-rescue queue for immediate, non-nested actions with tags
@@ -37,15 +28,7 @@ No cloud. No accounts. No integrations. All data stays on the device.
 - **Full REST API** — Every mutation returns the full updated Goal for clean state sync
 - **Responsive** — Desktop top nav, mobile bottom tab bar
 
-### Legacy (Flet PWA, still deployed)
-
-- Same features as above (except wizard and REST API)
-- PWA — add to homescreen, works offline
-- Schema versioning — data survives app updates with migration support
-
 ## Quick Start
-
-### New stack
 
 ```bash
 # install dependencies
@@ -60,13 +43,12 @@ cd backend && uvicorn app.main:app --reload --port 8000
 cd frontend && npm run dev     # proxies /api to :8000
 ```
 
-### Legacy Flet PWA
+### Migrating from the old PWA
 
 ```bash
-uv sync
-uv run flet run --web      # web
-uv run flet run             # desktop
-uv run pytest tests/ -v    # 67 tests
+# 1. Export localStorage from the browser console (see script header for details)
+# 2. Save to data/export.json
+python scripts/migrate_data.py data/export.json
 ```
 
 ## Documentation
@@ -86,23 +68,23 @@ personal_app/
 ├── frontend/              # React + Vite (UI)
 ├── backend/               # FastAPI + SQLite (API)
 ├── registry/              # Rust crate (keys + logbook) — not started
-├── src/                   # LEGACY: Flet PWA (deployed, active)
-├── tests/                 # LEGACY: pytest (67 tests for src/)
-├── scripts/dev.sh         # starts frontend + backend together
+├── scripts/
+│   ├── dev.sh             # starts frontend + backend together
+│   └── migrate_data.py    # localStorage → SQLite migration
 ├── docs/                  # ADR, vision, roadmap, contributing
-└── local/                 # untracked: rust-toys specs, LEARNING.md
+├── local/                 # untracked: rust-toys specs, LEARNING.md
+└── src/                   # ARCHIVED: Flet PWA
 ```
 
 ## Tech
 
-| Layer | Legacy (Flet PWA) | New Stack |
-|-------|-------------------|-----------|
-| **UI** | Flet (Python → Flutter) | React + Vite |
-| **API** | N/A (direct localStorage) | FastAPI (Python) |
-| **Storage** | Browser localStorage | SQLite (WAL, triggers) |
-| **Registry** | N/A | Rust crate (planned) |
-| **Desktop** | N/A | Tauri v2 (planned) |
-| **CI/CD** | GitHub Actions → Pages | TBD |
+| Layer | Stack |
+|-------|-------|
+| **UI** | React 19 + Vite |
+| **API** | FastAPI (Python) |
+| **Storage** | SQLite (WAL, cascading triggers) |
+| **Registry** | Rust crate (planned: Argon2 + ChaCha20-Poly1305) |
+| **Desktop** | Tauri v2 (planned) |
 
 ---
 

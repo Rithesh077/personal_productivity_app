@@ -4,14 +4,14 @@
 
 ## Current state
 
-The project is mid-migration (ADR-025). Three pieces exist or will exist:
+The migration from Flet to React + FastAPI is complete (ADR-025). The new stack is primary.
 
 | Directory | Language | Status | Purpose |
-|-----------|----------|-----------|---------|
-| `src/` | Python (Flet) | **Legacy, deployed** | The current PWA. Stays until React reaches parity |
-| `frontend/` | React (Vite) | **Built** | The new UI |
-| `backend/` | Python (FastAPI) | **Built** | REST API + SQLite storage |
+|-----------|----------|--------|---------|
+| `frontend/` | React (Vite) | **Active** | UI |
+| `backend/` | Python (FastAPI) | **Active** | REST API + SQLite storage |
 | `registry/` | Rust | **Not started** | Encrypted storage (keys + logbook) |
+| `src/` | Python (Flet) | **Archived** | Legacy PWA, kept as reference |
 
 ## Prerequisites
 
@@ -164,10 +164,6 @@ Components are pure (data + callbacks via props). Pages are orchestrators (fetch
 
 ## Deployment
 
-### Current
+GitHub Pages currently still targets the old Flet PWA via the [deploy workflow](../.github/workflows/deploy.yml). This will be updated to target `frontend/dist/` or retired in favor of a Tauri desktop app.
 
-Deploys automatically to GitHub Pages on push to `main` via the [deploy workflow](../.github/workflows/deploy.yml). Targets the Flet PWA in `src/`.
-
-### Future
-
-To be decided when the React frontend reaches parity. Options: continue with GitHub Pages (targeting `frontend/dist/`), or retire Pages entirely in favor of a Tauri desktop app.
+For local development, use `./scripts/dev.sh`.
