@@ -916,4 +916,4 @@ The Flet PWA stays deployed on GitHub Pages and remains the daily driver until t
 
 ---
 
-*Last updated: Aug 4, 2026*
+*Last updated: Aug 10, 2026*

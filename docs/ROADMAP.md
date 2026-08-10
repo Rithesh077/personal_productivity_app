@@ -2,7 +2,7 @@
 
 *"Does this reduce the friction in my day?"* replaced *"did I do everything I planned?"* on 26 Jul 2026 (ADR-017). Background in [VISION.md](./VISION.md).
 
-Reorganised 3 Aug 2026 for the React + FastAPI + Rust registry structure (ADR-025).
+Reorganised 3 Aug 2026 for the React + FastAPI + Rust registry structure (ADR-025). Phases 1–2 completed 10 Aug 2026.
 
 One module at a time. The long-term vision does not block the next useful feature.
 
