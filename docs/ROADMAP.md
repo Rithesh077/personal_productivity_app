@@ -2,7 +2,7 @@
 
 *"Does this reduce the friction in my day?"* replaced *"did I do everything I planned?"* on 26 Jul 2026 (ADR-017). Background in [VISION.md](./VISION.md).
 
-Reorganised 3 Aug 2026 for the React + FastAPI + Rust registry structure (ADR-025).
+Reorganised 3 Aug 2026 for the React + FastAPI + Rust registry structure (ADR-025). Phases 1–2 completed 10 Aug 2026.
 
 One module at a time. The long-term vision does not block the next useful feature.
 
@@ -44,14 +44,14 @@ Build the UI. Vite dev server proxies `/api` to the Python backend.
 - [x] Page: TaskList (priority queue, DMN rescue)
 - [x] Page: Analytics (stats, charts, completion history)
 - [x] Navigation bar, routing, responsive layout
-- [ ] Feature parity with Flet PWA confirmed
+- [x] Feature parity with Flet PWA confirmed
 
 ## Phase 3: cutover
 
-- [ ] Data migration: export localStorage from deployed PWA, import into SQLite
-- [ ] Switch daily use from Flet PWA to React + FastAPI
+- [x] Data migration: `scripts/migrate_data.py` (localStorage JSON → SQLite)
+- [x] Switch daily use from Flet PWA to React + FastAPI
 - [ ] Update GitHub Actions to deploy the React app (or retire Pages)
-- [ ] Mark `src/` as archived
+- [x] Mark `src/` as archived
 
 ## Phase 4: Rust registry (independent track)
 

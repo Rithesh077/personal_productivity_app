@@ -8,48 +8,47 @@ No cloud. No accounts. No integrations. All data stays on the device.
 
 ---
 
-> ## Project structure
->
-> As of **Aug 3, 2026**, Stride is a three-part system:
->
-> | Directory | What | Status |
-> |-----------|------|--------|
-> | `frontend/` | React + Vite UI | Scaffolded |
-> | `backend/` | Python + FastAPI API + SQLite | Scaffolded |
-> | `registry/` | Rust encrypted storage (keys + logbook) | Scaffolded |
-> | `src/` | **Legacy** Flet PWA (still deployed, still works) | Active until React has parity |
->
-> The Flet PWA stays live on GitHub Pages until the new stack reaches feature parity ([ADR-027](docs/ADR.md)).
->
-> Read [VISION.md](docs/VISION.md) for where this is going, and [ADR-025 onward](docs/ADR.md) for the restructure decisions.
+## Architecture
 
----
+| Directory | Stack | Purpose |
+|-----------|-------|---------|
+| `frontend/` | React + Vite | UI |
+| `backend/` | Python + FastAPI + SQLite | API + storage |
+| `registry/` | Rust (planned) | Encrypted storage (keys + logbook) |
 
-## Features (current, via Flet PWA)
+The legacy Flet PWA (`src/`) is archived. See [ADR-025](docs/ADR.md).
 
-- **Hierarchical Goals** — Create goals with tasks and sub-tasks, cascading completion logic
-- **Priority Tasks List** — A DMN-rescue queue for immediate, non-nested actions
-- **Analytics Dashboard** — Completion rate, on-time %, same-day execution metrics
-- **Inline Editing** — Tap-to-edit titles, inline add fields (Notion-style)
-- **Schema Versioning** — Data survives app updates with migration support
-- **Concurrency Safe** — `asyncio.Lock` serializes all storage operations
-- **PWA** — Add to homescreen, works offline
+## Features
+
+- **Hierarchical Goals** — Create goals with tasks and sub-tasks, cascading completion via SQLite triggers
+- **Priority Task List** — A DMN-rescue queue for immediate, non-nested actions with tags
+- **Analytics Dashboard** — Completion rate, on-time %, same-day execution, tag breakdown
+- **Multi-step Goal Wizard** — Three-step creation: title → tasks/subtasks → review
+- **Inline Editing** — Double-click-to-edit titles, inline add fields
+- **Full REST API** — Every mutation returns the full updated Goal for clean state sync
+- **Responsive** — Desktop top nav, mobile bottom tab bar
 
 ## Quick Start
 
-### Legacy Flet PWA
-
 ```bash
-uv sync
-uv run flet run --web      # web
-uv run flet run             # desktop
-uv run pytest tests/ -v    # 67 tests
+# install dependencies
+cd backend && uv sync && cd ..
+cd frontend && npm install && cd ..
+
+# run both servers
+./scripts/dev.sh
+
+# or separately:
+cd backend && uvicorn app.main:app --reload --port 8000
+cd frontend && npm run dev     # proxies /api to :8000
 ```
 
-### New stack (when built)
+### Migrating from the old PWA
 
 ```bash
-./scripts/dev.sh            # starts both frontend and backend
+# 1. Export localStorage from the browser console (see script header for details)
+# 2. Save to data/export.json
+python scripts/migrate_data.py data/export.json
 ```
 
 ## Documentation
@@ -66,26 +65,26 @@ uv run pytest tests/ -v    # 67 tests
 
 ```
 personal_app/
-├── frontend/              # React + Vite (new UI)
-├── backend/               # FastAPI + SQLite (new API)
-├── registry/              # Rust crate (keys + logbook)
-├── src/                   # LEGACY: Flet PWA (deployed, active)
-├── tests/                 # LEGACY: pytest (67 tests)
-├── scripts/dev.sh         # dev startup
-├── docs/                  # ADR, vision, roadmap, contributing, learning
-└── local/                 # untracked: JDs, rust-toys specs
+├── frontend/              # React + Vite (UI)
+├── backend/               # FastAPI + SQLite (API)
+├── registry/              # Rust crate (keys + logbook) — not started
+├── scripts/
+│   ├── dev.sh             # starts frontend + backend together
+│   └── migrate_data.py    # localStorage → SQLite migration
+├── docs/                  # ADR, vision, roadmap, contributing
+├── local/                 # untracked: rust-toys specs, LEARNING.md
+└── src/                   # ARCHIVED: Flet PWA
 ```
 
 ## Tech
 
-| Layer | Current (Flet PWA) | Next |
-|-------|-------------------|------|
-| **UI** | Flet (Python → Flutter) | React + Vite |
-| **API** | N/A (direct localStorage) | FastAPI (Python) |
-| **Storage** | Browser localStorage | SQLite |
-| **Registry** | N/A | Rust crate (Argon2 + ChaCha20-Poly1305) |
-| **Desktop** | N/A | Tauri v2 (planned) |
-| **CI/CD** | GitHub Actions → Pages | TBD |
+| Layer | Stack |
+|-------|-------|
+| **UI** | React 19 + Vite |
+| **API** | FastAPI (Python) |
+| **Storage** | SQLite (WAL, cascading triggers) |
+| **Registry** | Rust crate (planned: Argon2 + ChaCha20-Poly1305) |
+| **Desktop** | Tauri v2 (planned) |
 
 ---
 

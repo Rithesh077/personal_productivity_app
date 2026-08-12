@@ -4,7 +4,7 @@ Written for future me, for whatever SLM or coding agent I point at this repo, an
 
 This is the honest account rather than a pitch: what I want the app to become, what I actually use today, and which parts I already know are beyond what I can build soon. Read it before touching architecture.
 
-Written 26 Jul 2026, at the start of the second pivot. Updated 3 Aug 2026 when the migration was restructured into independent tracks (ADR-025).
+Written 26 Jul 2026, at the start of the second pivot. Updated 3 Aug 2026 when the migration was restructured into independent tracks (ADR-025). Frontend and backend completed 10 Aug 2026.
 
 ## Purpose
 
@@ -120,5 +120,5 @@ None of these are blocking yet.
 - [ADR.md](./ADR.md) — every decision and its rationale, Flask through to Tauri. Start at ADR-017 for the current pivot.
 - [LEARNING.md](../local/rust-toys/LEARNING.md) — the Rust plan and what has actually sunk in.
 - [ROADMAP.md](./ROADMAP.md) — what comes next, in order.
-- [CONTRIBUTING.md](./CONTRIBUTING.md) — describes the current Flet app until the migration lands.
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — project structure, setup, testing for the new stack.
 - `local/rust-toys/` — eight toy specs that build the migration piece by piece. Untracked.
