@@ -1,0 +1,155 @@
+/* Wizard overlay */
+.wizard-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn var(--transition-fast);
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.wizard-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-xl);
+  width: 90%;
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-elevated);
+  animation: slideUp var(--transition-normal);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Header */
+.wizard-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--surface);
+}
+.wizard-header h2 { flex: 1; font-size: var(--font-size-xl); font-weight: 700; }
+
+.wizard-steps { display: flex; gap: var(--space-2); }
+.step-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: background var(--transition-fast);
+}
+.step-dot.active { background: var(--teal); }
+
+/* Body */
+.wizard-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.field-label {
+  display: block;
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+  font-weight: 500;
+}
+
+.wizard-input {
+  width: 100%;
+  padding: var(--space-3);
+  font-size: var(--font-size-base);
+  background: var(--surface);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+.wizard-input:focus { border-color: var(--teal); }
+
+/* Task list in wizard */
+.wizard-task-list { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3); }
+
+.wizard-task-item {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.wizard-task-header {
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.wizard-task-num { color: var(--teal); font-weight: 700; font-size: var(--font-size-md); }
+.wizard-task-title { flex: 1; font-size: var(--font-size-base); }
+
+.wizard-subtask-row {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-left: var(--space-5);
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+}
+.wizard-subtask-dot { color: var(--teal); }
+
+.wizard-subtask-add {
+  display: flex; gap: var(--space-2);
+  margin-left: var(--space-5);
+  margin-top: var(--space-1);
+}
+.wizard-subtask-add input {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  padding: 4px 8px;
+}
+
+.wizard-add-row {
+  display: flex; gap: var(--space-2);
+}
+
+/* Review */
+.review-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.review-card h3 { font-size: var(--font-size-xl); margin-bottom: var(--space-2); }
+.review-meta { color: var(--text-muted); font-size: var(--font-size-md); }
+.review-tasks { margin-top: var(--space-3); padding-left: var(--space-5); }
+.review-tasks li { margin-bottom: var(--space-1); font-size: var(--font-size-base); }
+.review-tasks ul { padding-left: var(--space-5); margin-top: var(--space-1); }
+.review-tasks ul li { font-size: var(--font-size-md); color: var(--text-secondary); }
+
+/* Footer */
+.wizard-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-top: 1px solid var(--surface);
+}
+
+.wizard-btn {
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+.wizard-btn.primary {
+  background: var(--teal);
+  color: var(--bg);
+}
+.wizard-btn.primary:hover { filter: brightness(1.1); }
+.wizard-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.wizard-btn.secondary {
+  color: var(--text-secondary);
+  background: var(--surface);
+}
+.wizard-btn.secondary:hover { background: var(--surface-hover); }

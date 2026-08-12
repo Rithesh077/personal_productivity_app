@@ -1,0 +1,18 @@
+[project]
+name = "stride-backend"
+version = "0.1.0"
+description = "Stride backend — FastAPI + SQLite"
+requires-python = ">=3.11"
+authors = [
+    { name = "Rithesh" }
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "httpx>=0.27.0",
+]

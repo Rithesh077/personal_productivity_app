@@ -4,7 +4,7 @@ Written for future me, for whatever SLM or coding agent I point at this repo, an
 
 This is the honest account rather than a pitch: what I want the app to become, what I actually use today, and which parts I already know are beyond what I can build soon. Read it before touching architecture.
 
-Written 26 Jul 2026, at the start of the second pivot.
+Written 26 Jul 2026, at the start of the second pivot. Updated 3 Aug 2026 when the migration was restructured into independent tracks (ADR-025).
 
 ## Purpose
 
@@ -26,23 +26,23 @@ The conclusion I draw: build for retrieval, recall, analysis, and persistence ac
 
 In rough order of how much I need them.
 
-### Vault and journal
+### Registry (keys + logbook)
 
 This is the reason for the pivot.
 
-The failure I am designing against is specific: the laptop dies, the SSD corrupts, and I lose my passwords, my notes, and the accumulated context of whatever I was working on. Rebuilding that costs weeks. The vault exists to make it impossible.
+The failure I am designing against is specific: the laptop dies, the SSD corrupts, and I lose my passwords, my notes, and the accumulated context of whatever I was working on. Rebuilding that costs weeks. The registry exists to make it impossible.
 
 It holds passwords, so they exist on more than one device, and it holds the journal, so I can read it from my phone without opening a laptop.
 
 Decisions already made:
 
-- Journal and secrets unlock independently. Reading a journal entry must not expose the password vault.
+- Logbook and keys unlock independently. Reading a journal entry must not expose the keys store.
 - Master password on every launch. No persistent session.
 - 2FA required to change a password. Reading is a lower bar than writing.
 - Browser autofill, eventually.
 - Offline. Not cloud-optional; no cloud.
 
-Crypto design is in ADR-020. `local/rust-toys/05-vault-and-crypto.md` builds up to it.
+Crypto design is in ADR-020. `local/rust-toys/05-vault-and-crypto.md` builds up to it. The crate lives in `registry/`.
 
 ### Intelligence engine
 
@@ -60,7 +60,7 @@ The existing goal, task and subtask hierarchy, the priority list, and the analyt
 
 ### Sync
 
-Every module above is worth much less if it is confined to one machine. Sync is what turns the vault into a genuine backup and makes the journal readable from my phone.
+Every module above is worth much less if it is confined to one machine. Sync is what turns the registry into a genuine backup and makes the logbook readable from my phone.
 
 The constraint is that it stays completely offline: LAN, device to device, or sneakernet, but never a server I do not own.
 
@@ -92,7 +92,7 @@ Ideas I have raised, considered, and consciously set aside. Recorded so that nei
 
 Local AI that reads the entire device and proposes a reorganisation and automation plan. My assessment at the time was that it is too much for now and that I need features that actually help me first. I still think that is correct.
 
-Offline password reset. I sketched a scheme where a reset sends a random number to the app on my phone, then realised the phone needs the vault in order to receive it, so the loop does not close. Genuinely unsolved; see ADR-020.
+Offline password reset. I sketched a scheme where a reset sends a random number to the app on my phone, then realised the phone needs the registry in order to receive it, so the loop does not close. Genuinely unsolved; see ADR-020.
 
 Splitting into separate apps and repositories per device. My own comment was "how hard can copy pasting and rewiring the code be right?......right?" The answer is that it is hard when the code is tangled and trivial when the core is a crate with no UI in it, which is why ADR-018 exists.
 
@@ -100,7 +100,7 @@ Renaming the app. Stride stays unless something better appears, and that convers
 
 ## Device scopes
 
-One app for now, with scope varying by device. Desktop gets everything and is the migration target. Mobile gets journal reading, vault access and quick capture, and comes later.
+One app for now, with scope varying by device. Desktop gets everything and is the migration target. Mobile gets logbook reading, keys access and quick capture, and comes later.
 
 Splitting into separate projects remains on the table.
 
@@ -108,17 +108,17 @@ Splitting into separate projects remains on the table.
 
 None of these are blocking yet.
 
-1. Vault recovery. What happens when I forget the master password? Printed recovery codes kept physically, Shamir shares across devices, or accepting that the data is gone.
-2. Sync conflicts. Last-write-wins or CRDTs. Journal entries are append-mostly and straightforward; vault entries are mutable and are not.
+1. Registry recovery. What happens when I forget the master password? Printed recovery codes kept physically, Shamir shares across devices, or accepting that the data is gone.
+2. Sync conflicts. Last-write-wins or CRDTs. Logbook entries are append-mostly and straightforward; keys entries are mutable and are not.
 3. What "better than Obsidian" actually means. At present it is a feeling rather than a specification, and it needs to become a list of behaviours before the engine can be built.
 4. Which local model, and how it runs. Deferred until there is data worth feeding it.
 5. The name. Deferred by decision. Candidates if I do change it: Ledger, Cairn, Anchor, Keep.
-6. What the second factor is, given no server and no cloud. A TOTP seed stored inside the vault is circular, so it is likely a hardware token or a second enrolled device.
+6. What the second factor is, given no server and no cloud. A TOTP seed stored inside the registry is circular, so it is likely a hardware token or a second enrolled device.
 
 ## The rest of the docs
 
 - [ADR.md](./ADR.md) — every decision and its rationale, Flask through to Tauri. Start at ADR-017 for the current pivot.
-- [LEARNING.md](./LEARNING.md) — the Rust plan and what has actually sunk in.
+- [LEARNING.md](../local/rust-toys/LEARNING.md) — the Rust plan and what has actually sunk in.
 - [ROADMAP.md](./ROADMAP.md) — what comes next, in order.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — describes the current Flet app until the migration lands.
 - `local/rust-toys/` — eight toy specs that build the migration piece by piece. Untracked.

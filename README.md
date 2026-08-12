@@ -2,27 +2,30 @@
 
 **Plan. Execute. Improve.**
 
-A privacy-first personal app built for exactly one user. It currently answers one question: _"Did I actually do what I planned?"_
+A privacy-first personal system built for exactly one user. It answers one question: _"Does this reduce the friction in my day?"_
 
-No integrations. No account. No cloud. Runs entirely in your browser using localStorage.
-
----
-
-> ## ⚠️ Pivoting
->
-> As of **Jul 26, 2026** this project is migrating from Flet/Python to **Tauri + Rust**, and widening from a goal tracker to a personal system built around an encrypted **vault + journal** and an offline **intelligence engine**.
->
-> Everything below describes the **current** Flet PWA, which still runs. It will be replaced.
->
-> - [Vision](docs/VISION.md) — what this is becoming, and why
-> - [ADR-017 onward](docs/ADR.md) — the pivot decisions and rationale
-> - [Roadmap](docs/ROADMAP.md) — what's next, in order
->
-> Two things below will stop being true: the PWA deployment ends with the migration, and local (never cloud) AI comes into scope — see [ADR-023](docs/ADR.md).
+No cloud. No accounts. No integrations. All data stays on the device.
 
 ---
 
-## Features
+> ## Project structure
+>
+> As of **Aug 3, 2026**, Stride is a three-part system:
+>
+> | Directory | What | Status |
+> |-----------|------|--------|
+> | `frontend/` | React + Vite UI | Scaffolded |
+> | `backend/` | Python + FastAPI API + SQLite | Scaffolded |
+> | `registry/` | Rust encrypted storage (keys + logbook) | Scaffolded |
+> | `src/` | **Legacy** Flet PWA (still deployed, still works) | Active until React has parity |
+>
+> The Flet PWA stays live on GitHub Pages until the new stack reaches feature parity ([ADR-027](docs/ADR.md)).
+>
+> Read [VISION.md](docs/VISION.md) for where this is going, and [ADR-025 onward](docs/ADR.md) for the restructure decisions.
+
+---
+
+## Features (current, via Flet PWA)
 
 - **Hierarchical Goals** — Create goals with tasks and sub-tasks, cascading completion logic
 - **Priority Tasks List** — A DMN-rescue queue for immediate, non-nested actions
@@ -32,50 +35,57 @@ No integrations. No account. No cloud. Runs entirely in your browser using local
 - **Concurrency Safe** — `asyncio.Lock` serializes all storage operations
 - **PWA** — Add to homescreen, works offline
 
-## Tech
-
-- **[Flet](https://flet.dev)** — Python → Web / Desktop / Mobile via Flutter
-- **Client Storage** — Zero backend, all data in browser `localStorage`
-- **CI/CD** — Auto-deploy to GitHub Pages on push to `main`
-
 ## Quick Start
 
+### Legacy Flet PWA
+
 ```bash
-# install dependencies
 uv sync
+uv run flet run --web      # web
+uv run flet run             # desktop
+uv run pytest tests/ -v    # 67 tests
+```
 
-# run locally (web)
-uv run flet run --web
+### New stack (when built)
 
-# run locally (desktop)
-uv run flet run
-
-# run tests
-uv run pytest tests/ -v
+```bash
+./scripts/dev.sh            # starts both frontend and backend
 ```
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Contributing](docs/CONTRIBUTING.md) | Project structure, setup, testing, deployment |
-| [Architecture Decision Records](docs/ADR.md) | Every architectural decision from Flask → Flet |
-| [Roadmap](docs/ROADMAP.md) | Feature roadmap and to-dos |
+| [Vision](docs/VISION.md) | What this is becoming, and why |
+| [Architecture Decisions](docs/ADR.md) | Every decision, Flask through React + Rust |
+| [Roadmap](docs/ROADMAP.md) | What's next, in order |
+| [Contributing](docs/CONTRIBUTING.md) | Project structure, setup, testing |
+| [Learning](local/rust-toys/LEARNING.md) | The Rust curriculum and progress |
 
 ## Project Structure
 
 ```
-src/
-├── main.py              # entry point, navigation, routing
-├── models/              # Goal, Task, SubTask, TaskItem
-├── views/               # planner, task list, analytics
-├── components/          # goal card, wizard, task list card
-├── services/storage.py  # SharedPreferences CRUD + schema versioning
-├── constants/design.py  # design tokens
-└── utils/               # time, color, math helpers
-tests/                   # 67 unit tests (pytest)
-docs/                    # ADR, contributing, roadmap
+personal_app/
+├── frontend/              # React + Vite (new UI)
+├── backend/               # FastAPI + SQLite (new API)
+├── registry/              # Rust crate (keys + logbook)
+├── src/                   # LEGACY: Flet PWA (deployed, active)
+├── tests/                 # LEGACY: pytest (67 tests)
+├── scripts/dev.sh         # dev startup
+├── docs/                  # ADR, vision, roadmap, contributing, learning
+└── local/                 # untracked: JDs, rust-toys specs
 ```
+
+## Tech
+
+| Layer | Current (Flet PWA) | Next |
+|-------|-------------------|------|
+| **UI** | Flet (Python → Flutter) | React + Vite |
+| **API** | N/A (direct localStorage) | FastAPI (Python) |
+| **Storage** | Browser localStorage | SQLite |
+| **Registry** | N/A | Rust crate (Argon2 + ChaCha20-Poly1305) |
+| **Desktop** | N/A | Tauri v2 (planned) |
+| **CI/CD** | GitHub Actions → Pages | TBD |
 
 ---
 

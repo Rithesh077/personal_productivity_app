@@ -1,0 +1,100 @@
+.task-list-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background: var(--card-bg);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  transition: border-color var(--transition-normal);
+}
+.task-list-card:hover { border-color: var(--surface-hover); }
+.task-list-card.completed { opacity: 0.5; }
+.task-list-card.editing {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tl-checkbox {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all var(--transition-fast);
+}
+.tl-checkbox:hover { border-color: var(--teal); color: var(--teal); }
+
+.tl-content { flex: 1; min-width: 0; }
+
+.tl-title {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  display: block;
+}
+
+.tl-description {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.tl-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.tl-tag {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.tl-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.task-list-card:hover .tl-actions { opacity: 1; }
+
+/* Editing mode */
+.tl-edit-input, .tl-edit-textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-base);
+  background: var(--surface);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  resize: none;
+}
+.tl-edit-input:focus, .tl-edit-textarea:focus { border-color: var(--teal); }
+
+.tl-tags-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.tl-tag-btn {
+  font-size: var(--font-size-xs);
+  padding: 4px 10px;
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+.tl-tag-btn.selected {
+  color: var(--tag-color);
+  border-color: var(--tag-color);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tl-edit-actions { display: flex; gap: var(--space-2); }

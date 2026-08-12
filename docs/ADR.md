@@ -20,7 +20,8 @@ Apr 14, 2026 GitHub Pages deployment + CI/CD
 Apr 19, 2026 UI/UX polish pass
 Jun 7, 2026  Task List feature design
 Jun 8, 2026  Concurrency lock (RMW hazard fix)
-Jul 26, 2026 Second pivot: Tauri + Rust, widened philosophy (current)
+Jul 26, 2026 Second pivot: Tauri + Rust, widened philosophy
+Aug 3, 2026  Third restructure: React + FastAPI + Rust registry (current)
 ```
 
 ---
@@ -765,4 +766,154 @@ Optimising purely for shipping speed means importing something for everything an
 
 ---
 
-*Last updated: Jul 26, 2026*
+## ADR-025: React + FastAPI, Python as Sidecar
+
+**Date:** Aug 3, 2026
+**Status:** Active
+**Amends:** ADR-017, ADR-021
+
+### Context
+
+ADR-017 planned a full rewrite: Flet dies, everything gets rebuilt in Rust, TUI ships first, React comes later. That plan was correct in direction but wrong in sequencing. The vault is the hard, new thing that requires learning Rust properly. The UI is the thing I've already built and know how to build. Blocking the UI on learning a new language means neither ships.
+
+### Decision
+
+Split the migration into independent tracks:
+
+1. **React frontend** — replaces the Flet UI. Vite + React. Consumes a REST API.
+2. **Python backend** — FastAPI. The existing models, utils, and business logic ported out of Flet views into route handlers. SQLite replaces SharedPreferences.
+3. **Rust registry** — standalone crate (`registry/`), built independently as a learning project. Two submodules: `keys` (passwords) and `logbook` (journal).
+4. **Tauri shell** (future) — wraps the React frontend, runs the registry as native Rust commands, runs Python as a sidecar process.
+
+The Flet PWA stays deployed and functional until the React frontend reaches parity.
+
+### Rationale
+
+The full-rewrite plan from ADR-017 had two risks:
+- Learning Rust and rebuilding the UI at the same time, making both slower
+- No usable app for months while the rewrite happens
+
+This restructure lets me:
+- Ship a better UI (React) without waiting for Rust
+- Learn Rust properly on the registry, which is the actual reason for the pivot
+- Keep using the Flet PWA in the meantime
+- Connect everything through Tauri when both pieces are ready
+
+ADR-021 (TUI first, React later) is amended: the TUI is no longer the interim frontend. React is. The TUI remains an option as a permanent tool for SSH use but is no longer a prerequisite.
+
+### Consequences
+
+- Three languages in one repo: Python, JavaScript, Rust. Acceptable for a personal project; would need reconsideration if collaborators appeared
+- The Python backend eventually becomes a Tauri sidecar, so it needs to run as a standalone process (FastAPI + uvicorn) and accept commands either via HTTP or stdin/stdout
+- The Flet `src/` directory stays as reference and active deployment until React has parity
+- `scripts/dev.sh` starts both frontend and backend in one command
+
+---
+
+## ADR-026: SQLite Triggers for Cascading Completion
+
+**Date:** Aug 3, 2026
+**Status:** Active
+**Implements:** ADR-019
+
+### Context
+
+The current cascading completion logic lives in `planner.py` as nested `async def` closures (~200 lines across `toggle_task_async`, `toggle_subtask_async`, `do_delete_task`, `do_delete_subtask`). It's the biggest contributor to the view being a god function.
+
+With the move to SQLite (ADR-019), there's a choice: keep the cascade logic in Python route handlers, or push it into the database as triggers.
+
+### Decision
+
+SQLite triggers handle cascading completion.
+
+```sql
+-- when all subtasks of a task are completed, auto-complete the task
+CREATE TRIGGER auto_complete_task
+AFTER UPDATE OF is_completed ON subtasks
+WHEN NEW.is_completed = 1
+BEGIN
+    UPDATE tasks SET
+        is_completed = 1,
+        completed_at = datetime('now')
+    WHERE id = NEW.task_id
+      AND NOT EXISTS (
+          SELECT 1 FROM subtasks
+          WHERE task_id = NEW.task_id AND is_completed = 0
+      );
+END;
+
+-- when all tasks of a goal are completed, auto-complete the goal
+CREATE TRIGGER auto_complete_goal
+AFTER UPDATE OF is_completed ON tasks
+WHEN NEW.is_completed = 1
+BEGIN
+    UPDATE goals SET
+        is_completed = 1,
+        completed_at = datetime('now')
+    WHERE id = NEW.goal_id
+      AND NOT EXISTS (
+          SELECT 1 FROM tasks
+          WHERE goal_id = NEW.goal_id AND is_completed = 0
+      );
+END;
+
+-- when a subtask is uncompleted, uncomplete its parent task and goal
+CREATE TRIGGER uncomplete_task_on_subtask
+AFTER UPDATE OF is_completed ON subtasks
+WHEN NEW.is_completed = 0
+BEGIN
+    UPDATE tasks SET is_completed = 0, completed_at = NULL
+    WHERE id = NEW.task_id AND is_completed = 1;
+END;
+
+CREATE TRIGGER uncomplete_goal_on_task
+AFTER UPDATE OF is_completed ON tasks
+WHEN NEW.is_completed = 0
+BEGIN
+    UPDATE goals SET is_completed = 0, completed_at = NULL
+    WHERE id = NEW.goal_id AND is_completed = 1;
+END;
+```
+
+### Rationale
+
+- Moves ~200 lines of the most tangled business logic out of Python entirely
+- The cascade becomes testable by inserting data and checking outcomes — no UI, no mocks, no Flet page
+- Triggers fire regardless of which code path writes to the database, so the cascade can't be accidentally bypassed (which is exactly the bug class the four unlocked `page.run_task` calls represent)
+- It's the honest place for this logic: the cascade is a data integrity constraint, not a UI concern
+
+### Consequences
+
+- Triggers are harder to debug than Python code when they misbehave. SQLite's `RAISE(ABORT, ...)` helps, but it's not a stack trace
+- The trigger definitions become part of the schema, versioned and migrated alongside table definitions
+- Route handlers become simple: update the row, return the updated goal. The cascade happened already
+- The 67 existing tests that verify cascade behavior become integration tests against the database rather than unit tests against Python functions
+
+---
+
+## ADR-027: PWA Continuity
+
+**Date:** Aug 3, 2026
+**Status:** Active
+**Amends:** ADR-017
+
+### Context
+
+ADR-017 declared the PWA dead. That was premature. The React frontend and Python backend don't exist yet, and killing the only working deployment before replacements are ready means no app at all.
+
+### Decision
+
+The Flet PWA stays deployed on GitHub Pages and remains the daily driver until the React + FastAPI stack reaches feature parity. The `src/` directory, the GitHub Actions workflow, and the pyproject.toml are not deleted or broken.
+
+"Feature parity" means: all three views (planner, task list, analytics) work in the React app, data has been migrated from localStorage to SQLite, and I've switched to using it daily.
+
+### Consequences
+
+- Two working apps will exist in parallel for a while. That's fine — one is legacy, one is next
+- The `src/` directory is explicitly labeled as legacy in the README
+- No changes are made to `src/` except critical bugfixes (like the four unlocked `page.run_task` calls from ROADMAP Phase 0)
+- GitHub Actions deployment continues targeting `src/` until the React app is ready to replace it
+
+---
+
+*Last updated: Aug 4, 2026*
